@@ -82,7 +82,7 @@ def run_task(task_id: str):
     update_task(task_id, state="running")
     try:
         result = execute_task(task["message"], SKILLS[task["skill"]])
-        update_task(task_id, state="completed", result=result)
+        terminal_state = result.pop("terminal_state", "completed")\n        update_task(task_id, state=terminal_state, result=result)
     except Exception as exc:
         update_task(task_id, state="failed", error=str(exc))
 

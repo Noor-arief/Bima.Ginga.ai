@@ -408,13 +408,22 @@ button{font:inherit;color:inherit}
   }
 
   /* ---------- Chat ---------- */
+  function renderMarkdown(el,text){
+    el.textContent='';
+    var src=String(text||''), re=/(\*\*([^*]+)\*\*|`([^`]+)`)/g, last=0, m;
+    while((m=re.exec(src))){
+      if(m.index>last)el.appendChild(document.createTextNode(src.slice(last,m.index)));
+      var n=document.createElement(m[2]?'strong':'code');n.textContent=m[2]||m[3];el.appendChild(n);last=re.lastIndex;
+    }
+    if(last<src.length)el.appendChild(document.createTextNode(src.slice(last)));
+  }
   function finishTyping(){
-    if(typing){clearInterval(typing.timer);typing.el.textContent=typing.full;typing=null;}
+    if(typing){clearInterval(typing.timer);renderMarkdown(typing.el,typing.full);typing=null;}
   }
   function makeMsg(role,text){
     var m=document.createElement('div');m.className='msg '+role;
     if(role==='ai'){var w=document.createElement('div');w.className='who';w.textContent='BimaGinga';m.appendChild(w);}
-    var b=document.createElement('div');b.className='bubble';b.textContent=text;m.appendChild(b);
+    var b=document.createElement('div');b.className='bubble';if(role==='ai')renderMarkdown(b,text);else b.textContent=text;m.appendChild(b);
     return {row:m,bubble:b};
   }
   function renderThread(){

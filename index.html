@@ -521,7 +521,7 @@ button{font:inherit;color:inherit}
       if(n==='new') newChat(); else showView(n);
     });
   });
-  $('[data-prompt]').forEach(function(b){b.addEventListener('click',function(){
+  $$('[data-prompt]').forEach(function(b){b.addEventListener('click',function(){
     var skill=b.dataset.skill;
     if(skill&&SKILLS[skill]) state.activeSkill=skill;
     send(b.dataset.prompt,skill);

@@ -426,11 +426,13 @@ button{font:inherit;color:inherit}
     thread.scrollTop=thread.scrollHeight;
   }
   function renderRecent(){var box=$('#recentChats');if(!box)return;box.textContent='';state.convs.slice(0,12).forEach(function(conv){var b=document.createElement('button');b.className='recent-chat'+(state.cur&&state.cur.id===conv.id?' active':'');b.textContent=conv.title||'Percakapan baru';b.title=b.textContent;b.addEventListener('click',function(){saveCur();state.cur=conv;showView('home');renderThread();renderRecent();});box.appendChild(b);});}
+  async function syncConversation(conv){try{await fetch('/api/conversations/'+encodeURIComponent(conv.id),{method:'PUT',headers:apiHeaders(),body:JSON.stringify({id:conv.id,title:conv.title,messages:conv.messages,updated_at:Date.now()})});}catch(e){}}
+  async function loadServerConversations(){try{var r=await fetch('/api/conversations',{headers:apiHeaders()});if(!r.ok)return;var d=await r.json();if(Array.isArray(d.conversations)&&d.conversations.length){var by={};state.convs.forEach(function(x){by[x.id]=x;});d.conversations.forEach(function(x){if(!by[x.id])state.convs.push({id:x.id,title:x.title,messages:x.messages||[],t:(x.updated_at||0)*1000});});state.convs.sort(function(a,b){return (b.t||0)-(a.t||0);});store.set('bg:convs',state.convs);renderRecent();}}catch(e){}}
   function saveCur(){
     var c=state.cur; if(!c.messages.length) return;
     var i=-1;state.convs.forEach(function(x,k){if(x.id===c.id)i=k;});
     if(i>=0) state.convs[i]=c; else state.convs.unshift(c);
-    store.set('bg:convs',state.convs);renderRecent();
+    store.set('bg:convs',state.convs);renderRecent();syncConversation(c);
   }
   function apiHistory(){
     return state.cur.messages.slice(-16).map(function(m){return {role:m.role==='ai'?'assistant':'user',text:m.text};});
@@ -549,7 +551,7 @@ button{font:inherit;color:inherit}
   });
 
   /* ---------- Init ---------- */
-  applyTheme(state.theme);greeting();renderThread();renderRecent();showView('home');
+  applyTheme(state.theme);greeting();renderThread();renderRecent();showView('home');loadServerConversations();
 })();
 </script>
 </body>

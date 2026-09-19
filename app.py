@@ -35,6 +35,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=12000)
     skill: Literal["write_improve","code_debug","analyze_data","plan_strategize","learn_research","custom_task"] = "custom_task"
     history: list[dict[str, str]] = Field(default_factory=list)
+    active_task_id: str | None = None
 
 def require_owner(x_bima_key: str | None):
     expected = os.getenv("BIMAGINGA_OWNER_KEY")
@@ -133,13 +134,20 @@ def index():
 @app.post("/api/chat")
 def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     require_owner(x_bima_key)
-    decision = route_message(req.message)
+    active_task = get_task(req.active_task_id) if req.active_task_id else None
+    active_execution = bool(active_task and active_task.get("state") in {"queued", "running"})
+    decision = route_message(req.message, active_task=active_execution)
     # Planning/writing/analysis/research skills are advisory by default. Action verbs inside
     # the requested deliverable (e.g. "buat strategi") must not start the execution worker.
     advisory_skills = {"write_improve", "analyze_data", "plan_strategize", "learn_research"}
     if req.skill in advisory_skills:
         decision = type(decision)("chat", "advisory skill handles requested deliverable in conversation")
     if decision.kind == "execution":
+        if active_execution and req.message.strip().lower() in {"lanjut", "lanjutkan", "terus", "continue", "gas", "ok lanjut"}:
+            return {
+                "answer": "Task yang aktif masih berjalan. BIMA melanjutkan task yang sama.",
+                "skill": req.skill, "mode": "execution-worker-v1", "task": active_task,
+            }
         task = create_task(req.message, req.skill)
         threading.Thread(target=run_task, args=(task["id"],), daemon=True).start()
         return {

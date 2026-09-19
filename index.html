@@ -456,7 +456,7 @@ button{font:inherit;color:inherit}
     saveCur();home.classList.remove('empty');home.classList.add('chatting');renderThread();ask.value='';
     var mm=makeMsg('ai','BimaGinga sedang berpikir…');thread.appendChild(mm.row);thread.scrollTop=thread.scrollHeight;
     try{
-      var res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,skill:state.activeSkill,history:history})});
+      var res=await fetch('/api/chat',{method:'POST',headers:apiHeaders(),body:JSON.stringify({message:text,skill:state.activeSkill,history:history})});
       var data={};try{data=await res.json();}catch(e){}
       if(!res.ok) throw new Error(data.detail||('HTTP '+res.status));
       var reply=data.answer||'BimaGinga tidak menerima jawaban dari model.';

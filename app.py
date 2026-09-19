@@ -5,6 +5,7 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from router import route_message
 from openai import OpenAI
 try:
     from google import genai
@@ -43,13 +44,14 @@ def chat(req: ChatRequest):
     if not deepseek_key and not gemini_key:
         raise HTTPException(status_code=503, detail="BIMA model provider is not configured.")
 
+    decision = route_message(req.message)
     system = (
         "You are BIMA, Arif's AI workspace and technical project partner. "
         "Use Indonesian informal language (gue/lo) unless the user asks otherwise. "
         "Be concise, concrete, and do not claim that you inspected, changed, tested, deployed, or executed anything unless tool evidence exists. "
         "This web-core v1 has model conversation capability but no GitHub/Railway execution tools yet. "
         "Never imply real-money trading execution. "
-        "Active skill: " + SKILLS[req.skill]
+        "Routing decision: " + decision.kind + ". Follow this routing decision; topic/domain context must not replace the user action. " + "Active skill: " + SKILLS[req.skill]
     )
     transcript = [system]
     for item in req.history[-16:]:

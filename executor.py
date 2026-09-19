@@ -43,18 +43,24 @@ def github_get_file(repo, path, ref=None):
     content = base64.b64decode(data["content"]).decode("utf-8")
     return {"repo": repo, "path": path, "ref": ref, "sha": data["sha"], "content": content[:30000]}
 
+def _require_sandbox_branch(branch):
+    branch = (branch or "").strip()
+    if not branch.startswith("bimaginga-sandbox/"):
+        raise RuntimeError("Repository writes are locked. Use an approved bimaginga-sandbox/* branch.")
+    return branch
+
 def github_put_new_file(repo, path, content, message, branch):
     if not _allowed(repo):
         raise RuntimeError("Repository is not in BIMA_GITHUB_ALLOWED_REPOS")
-    if branch in {"main", "master"}:
-        raise RuntimeError("Sandbox branch required")
+    branch = _require_sandbox_branch(branch)
     payload = {"message": message, "content": base64.b64encode(content.encode()).decode(), "branch": branch}
     data = _github("PUT", "/repos/%s/contents/%s" % (repo, urllib.parse.quote(path)), payload)
     return {"commit_sha": data["commit"]["sha"], "path": path, "branch": branch}
 
-def github_update_file(repo, path, content, message, sha, branch="main"):
+def github_update_file(repo, path, content, message, sha, branch):
     if not _allowed(repo):
         raise RuntimeError("Repository is not in BIMA_GITHUB_ALLOWED_REPOS")
+    branch = _require_sandbox_branch(branch)
     payload = {"message": message, "content": base64.b64encode(content.encode()).decode(), "sha": sha, "branch": branch}
     data = _github("PUT", "/repos/%s/contents/%s" % (repo, urllib.parse.quote(path)), payload)
     return {"commit_sha": data["commit"]["sha"], "path": path, "branch": branch}
@@ -75,9 +81,9 @@ def railway_project_status(project_id):
     return payload.get("data", {}).get("project")
 
 TOOLS = [
-    {"type":"function","function":{"name":"github_put_new_file","description":"Create a new text artifact on an existing sandbox branch.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","branch"]}}},
+    {"type":"function","function":{"name":"github_put_new_file","description":"Create a new text artifact only on an explicitly approved bimaginga-sandbox/* branch. Canonical/main branches are write-locked.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","branch"]}}},
     {"type":"function","function":{"name":"github_get_file","description":"Read a UTF-8 file from an allowlisted GitHub repository.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"ref":{"type":"string","description":"Optional branch/ref. Omit to use the repository canonical default configured by BIMA."}},"required":["repo","path"]}}},
-    {"type":"function","function":{"name":"github_update_file","description":"Update an existing UTF-8 file in an allowlisted GitHub repository. Never use for production/protected changes without approval.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"sha":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","sha"]}}},
+    {"type":"function","function":{"name":"github_update_file","description":"Update an existing UTF-8 file only on an explicitly approved bimaginga-sandbox/* branch. Canonical/main branches are write-locked.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"sha":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","sha","branch"]}}},
     {"type":"function","function":{"name":"railway_project_status","description":"Read project and service identity from an allowlisted Railway project. Read-only.","parameters":{"type":"object","properties":{"project_id":{"type":"string"}},"required":["project_id"]}}},
 ]
 
@@ -88,7 +94,7 @@ def execute_task(message, skill_instruction):
     client = OpenAI(api_key=key, base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"))
     model = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
     messages = [
-        {"role":"system","content":"You are BIMA Execution Worker. Use tools when the task requires repository evidence or edits. Never invent tool results. Keep changes minimal. For Noor-arief/BIMA, the canonical working branch is telegram-autonomous-project-execution unless the user explicitly names another branch. For Noor-arief/Bima.Ginga.ai, files named without a directory are at repository root unless evidence says otherwise; do not probe speculative app/ or src/ paths first. A failed exploratory tool call does not make the task blocked if later evidence successfully completes the user request. Keep final answers concise: normally 3-6 bullets, do not dump source code unless requested. Never perform production, destructive, wallet, or real-money actions. Continue until the task is actually complete or a concrete blocker remains. "+skill_instruction},
+        {"role":"system","content":"You are BIMA Execution Worker. Use tools when the task requires repository evidence or edits. Never invent tool results. Keep changes minimal. For Noor-arief/BIMA, the canonical working branch is telegram-autonomous-project-execution unless the user explicitly names another branch. For Noor-arief/Bima.Ginga.ai, files named without a directory are at repository root unless evidence says otherwise; do not probe speculative app/ or src/ paths first. A failed exploratory tool call does not make the task blocked if later evidence successfully completes the user request. Keep final answers concise: normally 3-6 bullets, do not dump source code unless requested. Never perform production, destructive, wallet, or real-money actions. Repository writes are forbidden on canonical/main/master branches; writes are allowed only on an explicitly approved bimaginga-sandbox/* branch. Reading is allowed. If a requested write has no approved sandbox branch, stop with approval_required rather than writing elsewhere. Continue until the task is actually complete or a concrete blocker remains. "+skill_instruction},
         {"role":"user","content":message},
     ]
     evidence = []

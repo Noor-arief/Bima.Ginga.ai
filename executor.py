@@ -30,9 +30,14 @@ def _github(method, path, body=None):
         detail = exc.read().decode(errors="replace")[:1200]
         raise RuntimeError("GitHub HTTP %s: %s" % (exc.code, detail))
 
-def github_get_file(repo, path, ref="main"):
+def _default_ref(repo):
+    refs = {"Noor-arief/BIMA": "telegram-autonomous-project-execution", "Noor-arief/Bima.Ginga.ai": "main"}
+    return refs.get(repo, "main")
+
+def github_get_file(repo, path, ref=None):
     if not _allowed(repo):
         raise RuntimeError("Repository is not in BIMA_GITHUB_ALLOWED_REPOS")
+    ref = ref or _default_ref(repo)
     q = urllib.parse.urlencode({"ref": ref})
     data = _github("GET", "/repos/%s/contents/%s?%s" % (repo, urllib.parse.quote(path), q))
     content = base64.b64decode(data["content"]).decode("utf-8")
@@ -71,7 +76,7 @@ def railway_project_status(project_id):
 
 TOOLS = [
     {"type":"function","function":{"name":"github_put_new_file","description":"Create a new text artifact on an existing sandbox branch.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","branch"]}}},
-    {"type":"function","function":{"name":"github_get_file","description":"Read a UTF-8 file from an allowlisted GitHub repository.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"ref":{"type":"string"}},"required":["repo","path"]}}},
+    {"type":"function","function":{"name":"github_get_file","description":"Read a UTF-8 file from an allowlisted GitHub repository.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"ref":{"type":"string","description":"Optional branch/ref. Omit to use the repository canonical default configured by BIMA."}},"required":["repo","path"]}}},
     {"type":"function","function":{"name":"github_update_file","description":"Update an existing UTF-8 file in an allowlisted GitHub repository. Never use for production/protected changes without approval.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"sha":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","sha"]}}},
     {"type":"function","function":{"name":"railway_project_status","description":"Read project and service identity from an allowlisted Railway project. Read-only.","parameters":{"type":"object","properties":{"project_id":{"type":"string"}},"required":["project_id"]}}},
 ]
@@ -83,7 +88,7 @@ def execute_task(message, skill_instruction):
     client = OpenAI(api_key=key, base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"))
     model = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
     messages = [
-        {"role":"system","content":"You are BIMA Execution Worker. Use tools when the task requires repository evidence or edits. Never invent tool results. Keep changes minimal. Never perform production, destructive, wallet, or real-money actions. Continue until the task is actually complete or a concrete blocker exists. "+skill_instruction},
+        {"role":"system","content":"You are BIMA Execution Worker. Use tools when the task requires repository evidence or edits. Never invent tool results. Keep changes minimal. For Noor-arief/BIMA, the canonical working branch is telegram-autonomous-project-execution unless the user explicitly names another branch. Never perform production, destructive, wallet, or real-money actions. Continue until the task is actually complete or a concrete blocker exists. "+skill_instruction},
         {"role":"user","content":message},
     ]
     evidence = []

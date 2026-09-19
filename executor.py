@@ -88,7 +88,7 @@ def execute_task(message, skill_instruction):
     client = OpenAI(api_key=key, base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"))
     model = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
     messages = [
-        {"role":"system","content":"You are BIMA Execution Worker. Use tools when the task requires repository evidence or edits. Never invent tool results. Keep changes minimal. For Noor-arief/BIMA, the canonical working branch is telegram-autonomous-project-execution unless the user explicitly names another branch. Never perform production, destructive, wallet, or real-money actions. Continue until the task is actually complete or a concrete blocker exists. "+skill_instruction},
+        {"role":"system","content":"You are BIMA Execution Worker. Use tools when the task requires repository evidence or edits. Never invent tool results. Keep changes minimal. For Noor-arief/BIMA, the canonical working branch is telegram-autonomous-project-execution unless the user explicitly names another branch. For Noor-arief/Bima.Ginga.ai, files named without a directory are at repository root unless evidence says otherwise; do not probe speculative app/ or src/ paths first. A failed exploratory tool call does not make the task blocked if later evidence successfully completes the user request. Keep final answers concise: normally 3-6 bullets, do not dump source code unless requested. Never perform production, destructive, wallet, or real-money actions. Continue until the task is actually complete or a concrete blocker remains. "+skill_instruction},
         {"role":"user","content":message},
     ]
     evidence = []
@@ -97,8 +97,9 @@ def execute_task(message, skill_instruction):
         msg = response.choices[0].message
         if not msg.tool_calls:
             answer = (msg.content or "").strip()
+            successful_tools = [item for item in evidence if item.get("ok")]
             failed_tools = [item for item in evidence if not item.get("ok")]
-            state = "blocked" if failed_tools else "completed"
+            state = "completed" if successful_tools or not failed_tools else "blocked"
             return {"answer": answer, "evidence": evidence, "provider": "deepseek", "terminal_state": state}
         messages.append(msg)
         for call in msg.tool_calls:

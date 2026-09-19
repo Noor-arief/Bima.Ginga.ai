@@ -453,7 +453,7 @@ button{font:inherit;color:inherit}
     }
     throw new Error('Task masih berjalan. Status tersimpan di server dan dapat dilanjutkan setelah reconnect.');
   }
-  async async function send(text,skill){
+  async function send(text,skill){
     text=(text||'').trim(); if(!text) return;
     if(skill&&SKILLS[skill]) state.activeSkill=skill;
     showView('home');finishTyping();

@@ -134,6 +134,11 @@ def index():
 def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     require_owner(x_bima_key)
     decision = route_message(req.message)
+    # Planning/writing/analysis/research skills are advisory by default. Action verbs inside
+    # the requested deliverable (e.g. "buat strategi") must not start the execution worker.
+    advisory_skills = {"write_improve", "analyze_data", "plan_strategize", "learn_research"}
+    if req.skill in advisory_skills:
+        decision = type(decision)("chat", "advisory skill handles requested deliverable in conversation")
     if decision.kind == "execution":
         task = create_task(req.message, req.skill)
         threading.Thread(target=run_task, args=(task["id"],), daemon=True).start()

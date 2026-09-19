@@ -360,7 +360,7 @@ button{font:inherit;color:inherit}
     get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
     set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
   };
-  function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+  function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}\n  function ownerKey(){var k=sessionStorage.getItem('bg:ownerKey');if(!k){k=window.prompt('BimaGinga Owner Key');if(k)sessionStorage.setItem('bg:ownerKey',k);}return k||'';}\n  function apiHeaders(){return {'Content-Type':'application/json','X-Bima-Key':ownerKey()};}
   function newConv(){return {id:uid(),title:'',messages:[],t:Date.now()};}
 
   var state={name:store.get('bg:name','Arif'),theme:store.get('bg:theme','dark'),convs:store.get('bg:convs',[]),cur:null,view:'home',activeSkill:'custom_task'};
@@ -431,7 +431,7 @@ button{font:inherit;color:inherit}
     return state.cur.messages.slice(-16).map(function(m){return {role:m.role==='ai'?'assistant':'user',text:m.text};});
   }
   async function liveReply(text){
-    var res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,skill:state.activeSkill,history:apiHistory()})});
+    var res=await fetch('/api/chat',{method:'POST',headers:apiHeaders(),body:JSON.stringify({message:text,skill:state.activeSkill,history:apiHistory()})});
     var data={};try{data=await res.json();}catch(e){}
     if(!res.ok) throw new Error(data.detail||('HTTP '+res.status));
     return data.answer||'BimaGinga tidak menerima jawaban dari model.';
@@ -439,7 +439,7 @@ button{font:inherit;color:inherit}
   async function waitForTask(taskId){
     for(var n=0;n<180;n++){
       await new Promise(function(resolve){setTimeout(resolve,2000);});
-      var r=await fetch('/api/tasks/'+encodeURIComponent(taskId));
+      var r=await fetch('/api/tasks/'+encodeURIComponent(taskId),{headers:{'X-Bima-Key':ownerKey()}});
       if(!r.ok) throw new Error('Task status HTTP '+r.status);
       var t=await r.json();
       if(['completed','failed','blocked','approval_required'].indexOf(t.state)>=0) return t;

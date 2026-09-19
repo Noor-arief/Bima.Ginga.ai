@@ -22,11 +22,16 @@ class Route:
     reason: str
 
 
+def is_continuation(message: str) -> bool:
+    text = " ".join((message or "").strip().split())
+    return bool(CONTINUE_RE.search(text))
+
+
 def route_message(message: str, active_task: bool = False) -> Route:
     text = " ".join((message or "").strip().split())
     if ACTION_RE.search(text) or CREATE_RE.search(text):
         return Route("execution", "explicit execution intent")
-    if active_task and CONTINUE_RE.search(text):
+    if active_task and is_continuation(text):
         return Route("execution", "continuation of active execution task")
     if STATUS_RE.search(text):
         return Route("status", "informational project-state request")

@@ -267,12 +267,12 @@ button{font:inherit;color:inherit}
         <h1 id="greet">Good morning, Arif.</h1>
         <p class="sub">What would you like to do today?</p>
         <div class="chips">
-          <button class="chip" data-prompt="Help me write or improve a message."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg>Write / Improve</button>
-          <button class="chip" data-prompt="Help me find and fix a bug in my code."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-code"/></svg>Code / Debug</button>
-          <button class="chip" data-prompt="Help me analyze my data and spot the trends."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chart"/></svg>Analyze Data</button>
-          <button class="chip" data-prompt="Help me plan and prioritize my goals for this week."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-target"/></svg>Plan / Strategize</button>
-          <button class="chip" data-prompt="Help me learn and research a new topic."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"/></svg>Learn / Research</button>
-          <button class="chip" data-prompt="I have a custom task. Let's set it up."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sliders"/></svg>Custom Task</button>
+          <button class="chip" data-skill="write_improve" data-prompt="Help me write or improve a message."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg>Write / Improve</button>
+          <button class="chip" data-skill="code_debug" data-prompt="Help me find and fix a bug in my code."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-code"/></svg>Code / Debug</button>
+          <button class="chip" data-skill="analyze_data" data-prompt="Help me analyze my data and spot the trends."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chart"/></svg>Analyze Data</button>
+          <button class="chip" data-skill="plan_strategize" data-prompt="Help me plan and prioritize my goals for this week."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-target"/></svg>Plan / Strategize</button>
+          <button class="chip" data-skill="learn_research" data-prompt="Help me learn and research a new topic."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"/></svg>Learn / Research</button>
+          <button class="chip" data-skill="custom_task" data-prompt="I have a custom task. Let's set it up."><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sliders"/></svg>Custom Task</button>
         </div>
       </div>
       <div class="thread" id="thread" role="log" aria-live="polite" aria-label="Conversation"></div>
@@ -363,7 +363,16 @@ button{font:inherit;color:inherit}
   function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
   function newConv(){return {id:uid(),title:'',messages:[],t:Date.now()};}
 
-  var state={name:store.get('bg:name','Arif'),theme:store.get('bg:theme','dark'),convs:store.get('bg:convs',[]),cur:null,view:'home'};
+  var state={name:store.get('bg:name','Arif'),theme:store.get('bg:theme','dark'),convs:store.get('bg:convs',[]),cur:null,view:'home',activeSkill:'custom_task'};
+  var SKILLS={
+    write_improve:{label:'Write / Improve',instruction:'Draft, rewrite, summarize, translate, or improve written content while preserving the user intent.'},
+    code_debug:{label:'Code / Debug',instruction:'Inspect code and connected technical tools when available; diagnose root cause, make the smallest safe fix, test, and verify. Continue multi-step technical work until complete, genuinely blocked, or an approval gate is reached.'},
+    analyze_data:{label:'Analyze Data',instruction:'Analyze supplied or connected data, metrics, reports, and datasets; identify trends, outliers, and evidence-based conclusions.'},
+    plan_strategize:{label:'Plan / Strategize',instruction:'Turn goals into prioritized plans, roadmaps, decisions, milestones, and next actions.'},
+    learn_research:{label:'Learn / Research',instruction:'Research and explain topics using available sources and tools; distinguish evidence from assumptions and cite sources when available.'},
+    custom_task:{label:'Custom Task',instruction:'Handle free-form or cross-skill multi-step tasks. Use the skills and tools needed and continue until complete, genuinely blocked, or an approval gate is reached.'}
+  };
+  function skillContext(){return SKILLS[state.activeSkill]||SKILLS.custom_task;}
   if(!Array.isArray(state.convs)) state.convs=[];
   if(state.theme!=='light'&&state.theme!=='dark') state.theme='dark';
   state.cur=newConv();
@@ -427,11 +436,12 @@ button{font:inherit;color:inherit}
     if(/learn|research|explain|summar/i.test(t)) return "The short version: three key ideas with one example each, plus two sources to go deeper. Want a quiz?";
     return "This preview can't answer that yet. Once BimaGinga is connected to a live model, I'll take it from here.";
   }
-  function send(text){
+  function send(text,skill){
     text=(text||'').trim(); if(!text) return;
+    if(skill&&SKILLS[skill]) state.activeSkill=skill;
     showView('home');finishTyping();
     var c=state.cur; if(!c.title) c.title=text.length>52?text.slice(0,52)+'…':text;
-    c.messages.push({role:'user',text:text});
+    c.messages.push({role:'user',text:text,skill:state.activeSkill});
     var reply=replyFor(text);
     c.messages.push({role:'ai',text:reply});
     saveCur();
@@ -452,7 +462,7 @@ button{font:inherit;color:inherit}
     ask.value='';
   }
   function newChat(){
-    finishTyping();saveCur();state.cur=newConv();renderThread();showView('home');ask.value='';
+    finishTyping();saveCur();state.cur=newConv();state.activeSkill='custom_task';renderThread();showView('home');ask.value='';
     if(!matchMedia('(max-width:820px)').matches) ask.focus();
   }
 
@@ -499,7 +509,11 @@ button{font:inherit;color:inherit}
       if(n==='new') newChat(); else showView(n);
     });
   });
-  $$('[data-prompt]').forEach(function(b){b.addEventListener('click',function(){send(b.dataset.prompt);});});
+  $('[data-prompt]').forEach(function(b){b.addEventListener('click',function(){
+    var skill=b.dataset.skill;
+    if(skill&&SKILLS[skill]) state.activeSkill=skill;
+    send(b.dataset.prompt,skill);
+  });});
   $$('[data-fill]').forEach(function(b){
     b.addEventListener('click',function(){
       newChat();ask.value=b.dataset.fill;ask.focus();

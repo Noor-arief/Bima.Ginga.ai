@@ -15,7 +15,7 @@ try:
 except ImportError:
     genai = None
 
-from router import route_message
+from router import is_continuation, route_message
 from task_store import create_task, get_task, list_tasks, needs_approval, recover_interrupted, update_task
 from executor import execute_task
 
@@ -143,7 +143,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     if req.skill in advisory_skills:
         decision = type(decision)("chat", "advisory skill handles requested deliverable in conversation")
     if decision.kind == "execution":
-        if active_execution and req.message.strip().lower() in {"lanjut", "lanjutkan", "terus", "continue", "gas", "ok lanjut"}:
+        if active_execution and is_continuation(req.message):
             return {
                 "answer": "Task yang aktif masih berjalan. BIMA melanjutkan task yang sama.",
                 "skill": req.skill, "mode": "execution-worker-v1", "task": active_task,

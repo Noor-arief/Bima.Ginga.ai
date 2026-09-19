@@ -2,6 +2,9 @@ import os
 import threading
 from pathlib import Path
 from typing import Literal
+import json
+import time
+import uuid
 
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import FileResponse
@@ -37,6 +40,31 @@ def require_owner(x_bima_key: str | None):
     expected = os.getenv("BIMAGINGA_OWNER_KEY")
     if not expected or x_bima_key != expected:
         raise HTTPException(status_code=401, detail="BimaGinga owner authentication required.")
+
+class ConversationRequest(BaseModel):
+    id: str | None = None
+    title: str = ""
+    messages: list[dict[str, str]] = Field(default_factory=list)
+    updated_at: int | None = None
+
+CONV_STORE = Path(os.getenv("BIMAGINGA_DATA_DIR", "/data")) / "conversations.json"
+CONV_LOCK = threading.RLock()
+
+def load_conversations():
+    with CONV_LOCK:
+        if not CONV_STORE.exists(): return []
+        try: return json.loads(CONV_STORE.read_text("utf-8"))
+        except Exception: return []
+
+def save_conversation(req: ConversationRequest):
+    with CONV_LOCK:
+        items = load_conversations()
+        cid = req.id or uuid.uuid4().hex
+        value = {"id":cid,"title":req.title or "Percakapan baru","messages":req.messages[-200:],"updated_at":int(time.time())}
+        items = [x for x in items if x.get("id") != cid]
+        items.insert(0,value)
+        tmp=CONV_STORE.with_suffix(".tmp");tmp.write_text(json.dumps(items[:100],ensure_ascii=False,indent=2),"utf-8");tmp.replace(CONV_STORE)
+        return value
 
 class TaskRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=12000)
@@ -145,3 +173,14 @@ def task(task_id: str, x_bima_key: str | None = Header(default=None)):
     if not value:
         raise HTTPException(status_code=404, detail="Task not found")
     return value
+
+@app.get("/api/conversations")
+def conversations(x_bima_key: str | None = Header(default=None)):
+    require_owner(x_bima_key)
+    return {"conversations": load_conversations()}
+
+@app.put("/api/conversations/{conversation_id}")
+def put_conversation(conversation_id: str, req: ConversationRequest, x_bima_key: str | None = Header(default=None)):
+    require_owner(x_bima_key)
+    req.id = conversation_id
+    return save_conversation(req)

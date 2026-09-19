@@ -62,7 +62,8 @@ def railway_project_status(project_id):
 
 TOOLS = [
     {"type":"function","function":{"name":"github_get_file","description":"Read a UTF-8 file from an allowlisted GitHub repository.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"ref":{"type":"string"}},"required":["repo","path"]}}},
-    {"type":"function","function":{"name":"github_update_file","description":"Update an existing UTF-8 file in an allowlisted GitHub repository. Never use for production/protected changes without approval.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"sha":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","sha"]}}},\n    {"type":"function","function":{"name":"railway_project_status","description":"Read project and service identity from an allowlisted Railway project. Read-only.","parameters":{"type":"object","properties":{"project_id":{"type":"string"}},"required":["project_id"]}}},
+    {"type":"function","function":{"name":"github_update_file","description":"Update an existing UTF-8 file in an allowlisted GitHub repository. Never use for production/protected changes without approval.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"sha":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","sha"]}}},
+    {"type":"function","function":{"name":"railway_project_status","description":"Read project and service identity from an allowlisted Railway project. Read-only.","parameters":{"type":"object","properties":{"project_id":{"type":"string"}},"required":["project_id"]}}},
 ]
 
 def execute_task(message, skill_instruction):

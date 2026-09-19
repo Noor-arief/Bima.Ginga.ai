@@ -363,8 +363,8 @@ button{font:inherit;color:inherit}
     set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
   };
   function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
-  function ownerKey(){var k=sessionStorage.getItem('bg:ownerKey');if(!k){k=window.prompt('BimaGinga Owner Key');if(k)sessionStorage.setItem('bg:ownerKey',k);}return k||'';}
-  function apiHeaders(){return {'Content-Type':'application/json','X-Bima-Key':ownerKey()};}
+  function ownerKey(){return localStorage.getItem('bg:ownerKey')||'';}
+  function apiHeaders(){var h={'Content-Type':'application/json'};var k=ownerKey();if(k)h['X-Bima-Key']=k;return h;}
   function newConv(){return {id:uid(),title:'',messages:[],t:Date.now()};}
 
   var state={name:store.get('bg:name','Arif'),theme:store.get('bg:theme','dark'),convs:store.get('bg:convs',[]),cur:null,view:'home',activeSkill:'custom_task'};

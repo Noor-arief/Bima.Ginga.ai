@@ -3,7 +3,7 @@ import threading
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from openai import OpenAI
@@ -32,6 +32,11 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=12000)
     skill: Literal["write_improve","code_debug","analyze_data","plan_strategize","learn_research","custom_task"] = "custom_task"
     history: list[dict[str, str]] = Field(default_factory=list)
+
+def require_owner(x_bima_key: str | None):
+    expected = os.getenv("BIMAGINGA_OWNER_KEY")
+    if not expected or x_bima_key != expected:
+        raise HTTPException(status_code=401, detail="BimaGinga owner authentication required.")
 
 class TaskRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=12000)
@@ -97,7 +102,8 @@ def index():
     return FileResponse(ROOT / "index.html")
 
 @app.post("/api/chat")
-def chat(req: ChatRequest):
+def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
+    require_owner(x_bima_key)
     decision = route_message(req.message)
     if decision.kind == "execution":
         task = create_task(req.message, req.skill)
@@ -127,11 +133,13 @@ def chat(req: ChatRequest):
         raise HTTPException(status_code=502, detail=str(exc))
 
 @app.get("/api/tasks")
-def tasks():
+def tasks(x_bima_key: str | None = Header(default=None)):
+    require_owner(x_bima_key)
     return {"tasks": list_tasks()}
 
 @app.get("/api/tasks/{task_id}")
-def task(task_id: str):
+def task(task_id: str, x_bima_key: str | None = Header(default=None)):
+    require_owner(x_bima_key)
     value = get_task(task_id)
     if not value:
         raise HTTPException(status_code=404, detail="Task not found")

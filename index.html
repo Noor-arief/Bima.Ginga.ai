@@ -436,6 +436,16 @@ button{font:inherit;color:inherit}
     if(!res.ok) throw new Error(data.detail||('HTTP '+res.status));
     return data.answer||'BimaGinga tidak menerima jawaban dari model.';
   }
+  async function waitForTask(taskId){
+    for(var n=0;n<180;n++){
+      await new Promise(function(resolve){setTimeout(resolve,2000);});
+      var r=await fetch('/api/tasks/'+encodeURIComponent(taskId));
+      if(!r.ok) throw new Error('Task status HTTP '+r.status);
+      var t=await r.json();
+      if(['completed','failed','blocked','approval_required'].indexOf(t.state)>=0) return t;
+    }
+    throw new Error('Task masih berjalan. Status tersimpan di server dan dapat dilanjutkan setelah reconnect.');
+  }
   async function send(text,skill){
     text=(text||'').trim(); if(!text) return;
     if(skill&&SKILLS[skill]) state.activeSkill=skill;
@@ -450,6 +460,12 @@ button{font:inherit;color:inherit}
       var data={};try{data=await res.json();}catch(e){}
       if(!res.ok) throw new Error(data.detail||('HTTP '+res.status));
       var reply=data.answer||'BimaGinga tidak menerima jawaban dari model.';
+      if(data.task&&data.task.id){
+        mm.bubble.textContent=reply+'\n\nStatus: '+data.task.state;
+        var done=await waitForTask(data.task.id);
+        if(done.state==='completed'&&done.result&&done.result.answer) reply=done.result.answer+'\n\nStatus: COMPLETED';
+        else reply='Status: '+done.state.toUpperCase()+(done.error?'\n'+done.error:'');
+      }
       c.messages.push({role:'ai',text:reply});saveCur();renderThread();
     }catch(err){
       mm.bubble.textContent='Live Core belum tersedia: '+err.message;

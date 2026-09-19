@@ -201,6 +201,7 @@ button{font:inherit;color:inherit}
 @media (prefers-reduced-motion: reduce){
   .sidebar{transition:none}.send{transition:none}
 }
+.recent-wrap{padding:8px 20px 90px;overflow:auto;flex:1}.recent-title{font-size:13px;font-weight:700;color:var(--muted);margin:6px 8px 8px}.recent-chat{display:block;width:100%;border:0;background:transparent;color:var(--text);text-align:left;padding:9px 10px;border-radius:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font:inherit;font-size:14px}.recent-chat:hover,.recent-chat.active{background:var(--hover)}
 </style>
 </head>
 <body>
@@ -247,6 +248,7 @@ button{font:inherit;color:inherit}
       <button class="nav-btn" data-nav="library"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"/></svg>Library</button>
       <button class="nav-btn" data-nav="settings"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sliders"/></svg>Settings</button>
     </nav>
+    <section class="recent-wrap" aria-label="Recent conversations"><div class="recent-title">Terkini</div><div id="recentChats" class="recent-chats"></div></section>
     <div class="me"><div class="avatar" aria-hidden="true"></div><div><strong id="meName">Arif</strong><small>Personal Workspace</small></div></div>
   </aside>
   <div class="scrim" id="scrim"></div>
@@ -423,11 +425,12 @@ button{font:inherit;color:inherit}
     home.classList.toggle('chatting',!!state.cur.messages.length);
     thread.scrollTop=thread.scrollHeight;
   }
+  function renderRecent(){var box=$('#recentChats');if(!box)return;box.textContent='';state.convs.slice(0,12).forEach(function(conv){var b=document.createElement('button');b.className='recent-chat'+(state.cur&&state.cur.id===conv.id?' active':'');b.textContent=conv.title||'Percakapan baru';b.title=b.textContent;b.addEventListener('click',function(){saveCur();state.cur=conv;showView('home');renderThread();renderRecent();});box.appendChild(b);});}
   function saveCur(){
     var c=state.cur; if(!c.messages.length) return;
     var i=-1;state.convs.forEach(function(x,k){if(x.id===c.id)i=k;});
     if(i>=0) state.convs[i]=c; else state.convs.unshift(c);
-    store.set('bg:convs',state.convs);
+    store.set('bg:convs',state.convs);renderRecent();
   }
   function apiHistory(){
     return state.cur.messages.slice(-16).map(function(m){return {role:m.role==='ai'?'assistant':'user',text:m.text};});
@@ -546,7 +549,7 @@ button{font:inherit;color:inherit}
   });
 
   /* ---------- Init ---------- */
-  applyTheme(state.theme);greeting();renderThread();showView('home');
+  applyTheme(state.theme);greeting();renderThread();renderRecent();showView('home');
 })();
 </script>
 </body>

@@ -466,7 +466,7 @@ button{font:inherit;color:inherit}
         mm.bubble.textContent=reply+'\n\nStatus: '+data.task.state;
         var done=await waitForTask(data.task.id);
         if(done.state==='completed'&&done.result&&done.result.answer) reply=done.result.answer+'\n\nStatus: COMPLETED';
-        else reply='Status: '+done.state.toUpperCase()+(done.error?'\n'+done.error:'');
+        else { var detail=(done.result&&done.result.answer)?done.result.answer:(done.error||'Task berhenti tanpa detail.'); reply='Status: '+done.state.toUpperCase()+'\n\n'+detail; }
       }
       c.messages.push({role:'ai',text:reply});saveCur();renderThread();
     }catch(err){

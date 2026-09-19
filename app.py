@@ -14,6 +14,7 @@ except ImportError:
 
 from router import route_message
 from task_store import create_task, get_task, list_tasks, needs_approval, recover_interrupted, update_task
+from executor import execute_task
 
 ROOT = Path(__file__).resolve().parent
 app = FastAPI(title="BimaGinga Workspace", version="0.2.0")
@@ -75,16 +76,8 @@ def run_task(task_id: str):
         return
     update_task(task_id, state="running")
     try:
-        prompt = (
-            "You are BIMA Execution Worker. Complete the requested work as far as the currently available server capabilities allow. "
-            "Never claim external inspection, edits, tests, deployment, or tool execution without evidence. "
-            "If an external capability is unavailable, report the exact blocker rather than inventing success. "
-            "Never execute real-money trading or wallet actions. "
-            "Return a concise completion report with what is actually complete and any blocker.\n\n"
-            "Skill: " + SKILLS[task["skill"]] + "\nTask: " + task["message"]
-        )
-        answer, provider = model_answer(prompt)
-        update_task(task_id, state="completed", result={"answer": answer, "provider": provider})
+        result = execute_task(task["message"], SKILLS[task["skill"]])
+        update_task(task_id, state="completed", result=result)
     except Exception as exc:
         update_task(task_id, state="failed", error=str(exc))
 

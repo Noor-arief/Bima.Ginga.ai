@@ -105,7 +105,11 @@ def execute_task(message, skill_instruction):
             answer = (msg.content or "").strip()
             successful_tools = [item for item in evidence if item.get("ok")]
             failed_tools = [item for item in evidence if not item.get("ok")]
-            state = "completed" if successful_tools or not failed_tools else "blocked"
+            approval_block = any("Repository writes are locked" in item.get("error", "") for item in failed_tools)
+            if approval_block:
+                state = "approval_required"
+            else:
+                state = "completed" if successful_tools or not failed_tools else "blocked"
             return {"answer": answer, "evidence": evidence, "provider": "deepseek", "terminal_state": state}
         messages.append(msg)
         for call in msg.tool_calls:

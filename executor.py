@@ -82,7 +82,7 @@ def execute_task(message, skill_instruction):
         msg = response.choices[0].message
         if not msg.tool_calls:
             answer = (msg.content or "").strip()
-            return {"answer": answer, "evidence": evidence, "provider": "deepseek"}
+            failed_tools = [item for item in evidence if not item.get("ok")]\n            state = "blocked" if failed_tools else "completed"\n            return {"answer": answer, "evidence": evidence, "provider": "deepseek", "terminal_state": state}
         messages.append(msg)
         for call in msg.tool_calls:
             args = json.loads(call.function.arguments or "{}")

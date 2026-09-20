@@ -8,6 +8,7 @@ import io
 import json
 import time
 import uuid
+import urllib.request
 
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import FileResponse
@@ -120,6 +121,43 @@ def update_project_state_from_turn(message: str, answer: str) -> None:
         "last_assistant_result": answer[-10000:],
     }
     save_project_state(state)
+
+def trading_runtime_context(message: str) -> str:
+    """Read live paper-trading status for trading-related BIMA Web questions."""
+    if not re.search(r"\b(trading|trade|paper|shadow|position|posisi|pnl|profit|loss|market|coin|meme)\b", message.lower()):
+        return ""
+    url = os.getenv("BIMA_TRADING_STATUS_URL", "").strip()
+    if not url:
+        return ""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "BimaGinga-Workspace/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            payload = json.loads(response.read(2_000_000).decode("utf-8"))
+        validation = payload.get("validation") or {}
+        paper = validation.get("paper_metrics") or {}
+        risk = validation.get("risk_metrics") or {}
+        persistent = payload.get("persistent_metrics") or {}
+        compact = {
+            "dataset_cycles": payload.get("dataset_cycles"),
+            "cycle_observations": payload.get("cycle_observations"),
+            "persistent_open_positions": persistent.get("open", len(payload.get("open_positions") or [])),
+            "persistent_closed_positions": persistent.get("closed", len(payload.get("closed_positions") or [])),
+            "wins": persistent.get("wins", paper.get("wins")),
+            "losses": persistent.get("losses", paper.get("losses")),
+            "realized_pnl_usd": persistent.get("realized_pnl_usd", risk.get("realized_pnl_usd")),
+            "validation_status": validation.get("status"),
+            "validation_reasons": validation.get("validation_reasons"),
+            "validation_closed": validation.get("closed"),
+            "open_positions": payload.get("open_positions") or [],
+        }
+        return (
+            "LIVE TRADING ENGINE STATUS (read-only, source of truth for current trading runtime):\n"
+            + json.dumps(compact, ensure_ascii=False)
+            + "\nTrading is paper/shadow only. Never claim a real-money order was executed unless a separate authorized execution system provides evidence."
+        )
+    except Exception as exc:
+        print(f"[trading_status] unavailable error={type(exc).__name__}", flush=True)
+        return "LIVE TRADING ENGINE STATUS: temporarily unavailable. Do not invent current trading metrics.\n"
 
 def persistent_workspace_context(message: str, recent_history: list[dict[str, str]]) -> str:
     """Retrieve durable cross-session workspace state from persisted conversations."""
@@ -352,6 +390,9 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     persistent_context = persistent_workspace_context(req.message, req.history)
     if persistent_context:
         transcript.append(persistent_context)
+    trading_context = trading_runtime_context(req.message)
+    if trading_context:
+        transcript.append(trading_context)
     for item in req.history[-16:]:
         role, text = item.get("role"), item.get("text", "")
         if role in {"user", "assistant"} and text:

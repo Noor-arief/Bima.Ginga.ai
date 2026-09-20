@@ -49,7 +49,8 @@ class ChatRequest(BaseModel):
 
 def require_owner(x_bima_key: str | None):
     expected = os.getenv("BIMAGINGA_OWNER_KEY")
-    if expected and x_bima_key != expected:\n        raise HTTPException(status_code=401, detail="BimaGinga owner authentication failed.")
+    if expected and x_bima_key != expected:
+        raise HTTPException(status_code=401, detail="BimaGinga owner authentication failed.")
 
 class ConversationRequest(BaseModel):
     id: str | None = None

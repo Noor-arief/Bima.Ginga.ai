@@ -443,12 +443,13 @@ button{font:inherit;color:inherit}
   function renderRecent(){var box=$('#recentChats');if(!box)return;box.textContent='';state.convs.slice(0,12).forEach(function(conv){var b=document.createElement('button');b.className='recent-chat'+(state.cur&&state.cur.id===conv.id?' active':'');b.textContent=conv.title||'Percakapan baru';b.title=b.textContent;b.addEventListener('click',function(){saveCur();state.cur=conv;showView('home');renderThread();renderRecent();});box.appendChild(b);});}
   async function syncConversation(conv){try{await fetch('/api/conversations/'+encodeURIComponent(conv.id),{method:'PUT',headers:apiHeaders(),body:JSON.stringify({id:conv.id,title:conv.title,messages:conv.messages,updated_at:Date.now()})});}catch(e){}}
   async function loadServerConversations(){try{var r=await fetch('/api/conversations',{headers:apiHeaders()});if(!r.ok)return;var d=await r.json();if(Array.isArray(d.conversations)&&d.conversations.length){var by={};state.convs.forEach(function(x){by[x.id]=x;});d.conversations.forEach(function(x){if(by[x.id])return;var same=state.convs.find(function(y){var a=(y.messages||[])[0],b=(x.messages||[])[0];return a&&b&&a.role===b.role&&a.text===b.text;});if(same){if((x.updated_at||0)*1000>(same.t||0)){same.messages=x.messages||same.messages;same.title=x.title||same.title;same.t=(x.updated_at||0)*1000;}by[x.id]=same;return;}state.convs.push({id:x.id,title:x.title,messages:x.messages||[],t:(x.updated_at||0)*1000});});var seen={};state.convs=state.convs.filter(function(x){var a=(x.messages||[])[0];var key=a?(a.role+'|'+a.text):('id|'+x.id);if(seen[key])return false;seen[key]=1;return true;});state.convs.sort(function(a,b){return (b.t||0)-(a.t||0);});store.set('bg:convs',state.convs);renderRecent();}}catch(e){}}
-  function saveCur(){
+  function saveCur(syncServer){
     var c=state.cur; if(!c.messages.length) return;
     c.t=Date.now();
     state.convs=state.convs.filter(function(x){return x.id!==c.id;});
     state.convs.unshift(c);
-    store.set('bg:convs',state.convs);renderRecent();syncConversation(c);
+    store.set('bg:convs',state.convs);renderRecent();
+    if(syncServer!==false) syncConversation(c);
   }
   function apiHistory(){
     return state.cur.messages.slice(-16).map(function(m){return {role:m.role==='ai'?'assistant':'user',text:m.text};});
@@ -481,7 +482,9 @@ button{font:inherit;color:inherit}
     var attachmentLabel=attachments.map(function(a){return '📎 '+a.name;}).join('\n');
     var userDisplay=(attachmentLabel?(attachmentLabel+(text?'\n\n':'')):'')+(text||(!attachments.length?'':'Attached file'));
     c.messages.push({role:'user',text:userDisplay,skill:state.activeSkill});
-    saveCur();home.classList.remove('empty');home.classList.add('chatting');renderThread();ask.value='';
+    // Do not fire conversation persistence in parallel with a large attachment request.
+    // It is redundant here and previously produced an unauthorized PUT before /api/chat.
+    saveCur(false);home.classList.remove('empty');home.classList.add('chatting');renderThread();ask.value='';
     var mm=makeMsg('ai','BimaGinga sedang berpikir…');thread.appendChild(mm.row);thread.scrollTop=thread.scrollHeight;
     try{
       var res=await fetch('/api/chat',{method:'POST',headers:apiHeaders(),body:JSON.stringify({message:text||'Please inspect the attached file(s).',skill:state.activeSkill,history:history,active_task_id:state.activeTaskId,attachments:attachments})});

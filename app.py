@@ -87,12 +87,7 @@ def save_conversation(req: ConversationRequest):
 
 
 def persistent_workspace_context(message: str, recent_history: list[dict[str, str]]) -> str:
-    """Retrieve durable cross-session context from persisted conversations.
-
-    This is intentionally read-only: conversation persistence remains the source of truth.
-    It gives BIMA continuity across new browser sessions without dumping the whole store
-    into every model request.
-    """
+    """Retrieve durable cross-session workspace state from persisted conversations."""
     conversations = load_conversations()
     if not conversations:
         return ""
@@ -110,7 +105,7 @@ def persistent_workspace_context(message: str, recent_history: list[dict[str, st
         if token not in stop
     }
     continuation = bool(re.search(
-        r"\b(lanjut|lanjutkan|terus|project kita|proyek kita|yang tadi|sebelumnya|handover|\bho\b)\b",
+        r"\b(lanjut|lanjutkan|terus|project kita|proyek kita|yang tadi|sebelumnya|handover|ho)\b",
         query_text,
     ))
 
@@ -118,25 +113,26 @@ def persistent_workspace_context(message: str, recent_history: list[dict[str, st
     for recency, conv in enumerate(conversations[:50]):
         title = str(conv.get("title", ""))
         messages = conv.get("messages") or []
-        searchable = (title + " " + " ".join(str(m.get("text", "")) for m in messages[-40:])).lower()
-        score = sum(3 if term in title.lower() else 1 for term in terms if term in searchable)
-        # Generic continuation needs recent workspace state even when the new message
-        # contains no useful retrieval keywords.
-        if continuation and recency < 8:
-            score += max(1, 8 - recency)
+        searchable = (title + " " + " ".join(str(m.get("text", "")) for m in messages[-60:])).lower()
+        lexical = sum(3 if term in title.lower() else 1 for term in terms if term in searchable)
+        # Recency is the source-of-truth tie breaker for continuation requests.
+        # A stale conversation may be relevant, but must not outrank newer project state
+        # merely because it repeats more keywords.
+        recency_score = max(0, 50 - recency) if continuation else max(0, 8 - recency)
+        score = lexical * 10 + recency_score
         if score > 0:
             ranked.append((score, -recency, title, messages))
 
     ranked.sort(reverse=True)
     chunks = []
     budget = 32000
-    for _, _, title, messages in ranked[:8]:
+    for _, neg_recency, title, messages in ranked[:8]:
         selected = messages[-24:]
         body = "\n".join(
             ("ARIF: " if m.get("role") == "user" else "BIMA: ") + str(m.get("text", ""))[:4000]
             for m in selected if m.get("role") in {"user", "assistant"} and m.get("text")
         )
-        chunk = f"[Conversation: {title or 'Percakapan'}]\n{body}".strip()
+        chunk = f"[Saved conversation recency={-neg_recency}, title={title or 'Percakapan'}]\n{body}".strip()
         if not chunk:
             continue
         if len(chunk) > budget:
@@ -149,10 +145,12 @@ def persistent_workspace_context(message: str, recent_history: list[dict[str, st
     if not chunks:
         return ""
     return (
-        "PERSISTENT WORKSPACE MEMORY (cross-session, retrieved from saved conversations). "
-        "Use this to continue existing work. Prefer concrete checkpoints/decisions in this memory "
-        "over asking Arif to repeat context. Do not claim the memory is unavailable when relevant "
-        "context is present.\n\n" + "\n\n".join(chunks)
+        "PERSISTENT WORKSPACE MEMORY. Saved conversations are ordered by recency: recency=0 is newest. "
+        "For continuation/handover questions, treat the newest concrete checkpoint/status as the source of truth. "
+        "Older conversations are historical evidence only and must not override a newer checkpoint. "
+        "If newer messages say a bug/phase/task is fixed, completed, deployed, or moved forward, do not report the older state as current. "
+        "Prefer Arif's explicit latest status/decision over an older assistant summary. "
+        "Use the memory to continue work without asking Arif to repeat context.\n\n" + "\n\n".join(chunks)
     )
 
 class TaskRequest(BaseModel):

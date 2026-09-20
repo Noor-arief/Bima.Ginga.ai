@@ -203,6 +203,9 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     active_task = get_task(req.active_task_id) if req.active_task_id else None
     active_execution = bool(active_task and active_task.get("state") in {"queued", "running"})
     decision = route_message(req.message, active_task=active_execution)
+    # Attachments must stay on the model path so parsed document content reaches BIMA.
+    if req.attachments:
+        decision = type(decision)("chat", "attachment content requires model inspection")
     # Planning/writing/analysis/research skills are advisory by default. Action verbs inside
     # the requested deliverable (e.g. "buat strategi") must not start the execution worker.
     advisory_skills = {"write_improve", "analyze_data", "plan_strategize", "learn_research"}
@@ -240,7 +243,11 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
             transcript.append(("ARIF: " if role == "user" else "BIMA: ") + text[:12000])
     attachment_text = attachment_context(req.attachments)
     image_items = [item for item in req.attachments if item.type.startswith("image/")]
-    transcript.append("ARIF: " + req.message + (("\n\nATTACHMENTS:\n" + attachment_text) if attachment_text else ""))
+    attachment_instruction = ""
+    if req.attachments:
+        attachment_instruction = ("\n\nATTACHMENT INSTRUCTION: The attachment content below was extracted by the server. "
+                                  "Read and use it as the source of truth. Do not claim you can only see the filename when extracted content is present.")
+    transcript.append("ARIF: " + req.message + attachment_instruction + (("\n\nATTACHMENTS:\n" + attachment_text) if attachment_text else ""))
     try:
         answer, provider = model_answer("\n\n".join(transcript), images=image_items)
         return {"answer": answer, "skill": req.skill, "provider": provider, "mode": "live-core-v2"}

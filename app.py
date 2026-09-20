@@ -215,7 +215,9 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         role, text = item.get("role"), item.get("text", "")
         if role in {"user", "assistant"} and text:
             transcript.append(("ARIF: " if role == "user" else "BIMA: ") + text[:12000])
-    attachment_text = attachment_context(req.attachments)\n    transcript.append("ARIF: " + req.message + (("\\n\\nATTACHMENTS:\\n" + attachment_text) if attachment_text else ""))\n    try:
+    attachment_text = attachment_context(req.attachments)
+    transcript.append("ARIF: " + req.message + (("\n\nATTACHMENTS:\n" + attachment_text) if attachment_text else ""))
+    try:
         answer, provider = model_answer("\n\n".join(transcript))
         return {"answer": answer, "skill": req.skill, "provider": provider, "mode": "live-core-v2"}
     except RuntimeError as exc:

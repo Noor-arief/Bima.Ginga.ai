@@ -279,9 +279,16 @@ button{font:inherit;color:inherit}
         </div>
       </div>
       <div class="thread" id="thread" role="log" aria-live="polite" aria-label="Conversation"></div>
-      <div class="composer-wrap">\n      <div class="attachment-strip" id="attachmentStrip"></div>\n      <div class="composer">\n        <input id="filePick" type="file" multiple hidden accept="image/*,.pdf,.docx,.txt,.md,.csv,.json,.py,.js,.html,.css">\n        <button class="attach-btn" id="attachBtn" type="button" aria-label="Attach file" title="Attach file">+</button>\n        <input id="ask" type="text" placeholder="Ask BimaGinga anything…" aria-label="Ask BimaGinga anything" autocomplete="off">
+      <div class="composer-wrap">
+      <div class="attachment-strip" id="attachmentStrip"></div>
+      <div class="composer">
+        <input id="filePick" type="file" multiple hidden accept="image/*,.pdf,.docx,.txt,.md,.csv,.json,.py,.js,.html,.css">
+        <button class="attach-btn" id="attachBtn" type="button" aria-label="Attach file" title="Attach file">+</button>
+        <input id="ask" type="text" placeholder="Ask BimaGinga anything…" aria-label="Ask BimaGinga anything" autocomplete="off">
         <button class="send" id="send" aria-label="Send message"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-send"/></svg></button>
-      </div>\n      </div>\n      <p class="demo-note" id="statusNote">BimaGinga Live Core</p>
+      </div>
+      </div>
+      <p class="demo-note" id="statusNote">BimaGinga Live Core</p>
     </section>
 
     <!-- EXPLORE -->
@@ -469,7 +476,9 @@ button{font:inherit;color:inherit}
     if(skill&&SKILLS[skill]) state.activeSkill=skill;
     showView('home');finishTyping();
     var c=state.cur; if(!c.title) c.title=text.length>52?text.slice(0,52)+'…':text;
-    var history=apiHistory();\n    var attachments=pendingAttachments.slice();pendingAttachments=[];renderAttachments();\n    c.messages.push({role:'user',text:text||('[Attached '+attachments.length+' file(s)]'),skill:state.activeSkill});
+    var history=apiHistory();
+    var attachments=pendingAttachments.slice();pendingAttachments=[];renderAttachments();
+    c.messages.push({role:'user',text:text||('[Attached '+attachments.length+' file(s)]'),skill:state.activeSkill});
     saveCur();home.classList.remove('empty');home.classList.add('chatting');renderThread();ask.value='';
     var mm=makeMsg('ai','BimaGinga sedang berpikir…');thread.appendChild(mm.row);thread.scrollTop=thread.scrollHeight;
     try{
@@ -479,11 +488,17 @@ button{font:inherit;color:inherit}
       var reply=data.answer||'BimaGinga tidak menerima jawaban dari model.';
       if(data.task&&data.task.id){
         state.activeTaskId=data.task.id;
-        mm.bubble.textContent=reply+'\n\nStatus: '+data.task.state;
+        mm.bubble.textContent=reply+'
+
+Status: '+data.task.state;
         var done=await waitForTask(data.task.id);
         state.activeTaskId=null;
-        if(done.state==='completed'&&done.result&&done.result.answer) reply=done.result.answer+'\n\nStatus: COMPLETED';
-        else { var detail=(done.result&&done.result.answer)?done.result.answer:(done.error||'Task berhenti tanpa detail.'); reply='Status: '+done.state.toUpperCase()+'\n\n'+detail; }
+        if(done.state==='completed'&&done.result&&done.result.answer) reply=done.result.answer+'
+
+Status: COMPLETED';
+        else { var detail=(done.result&&done.result.answer)?done.result.answer:(done.error||'Task berhenti tanpa detail.'); reply='Status: '+done.state.toUpperCase()+'
+
+'+detail; }
       }
       c.messages.push({role:'ai',text:reply});saveCur();renderThread();
     }catch(err){
@@ -549,7 +564,10 @@ button{font:inherit;color:inherit}
       try{ask.setSelectionRange(ask.value.length,ask.value.length);}catch(e){}
     });
   });
-  $('#attachBtn').addEventListener('click',function(){$('#filePick').click();});\n  $('#filePick').addEventListener('change',function(e){addFiles(e.target.files);e.target.value='';});\n  document.addEventListener('paste',function(e){var files=[];Array.from((e.clipboardData&&e.clipboardData.items)||[]).forEach(function(it){if(it.kind==='file'){var file=it.getAsFile();if(file)files.push(file);}});if(files.length)addFiles(files);});\n  $('#send').addEventListener('click',function(){send(ask.value);});
+  $('#attachBtn').addEventListener('click',function(){$('#filePick').click();});
+  $('#filePick').addEventListener('change',function(e){addFiles(e.target.files);e.target.value='';});
+  document.addEventListener('paste',function(e){var files=[];Array.from((e.clipboardData&&e.clipboardData.items)||[]).forEach(function(it){if(it.kind==='file'){var file=it.getAsFile();if(file)files.push(file);}});if(files.length)addFiles(files);});
+  $('#send').addEventListener('click',function(){send(ask.value);});
   ask.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing) send(ask.value);});
 
   var nameInput=$('#nameInput');nameInput.value=state.name;

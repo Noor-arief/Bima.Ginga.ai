@@ -395,7 +395,12 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         transcript.append(persistent_context)
     trading_context = trading_runtime_context(req.message)
     if trading_context:
-        transcript.append(trading_context)
+        transcript.append(
+            trading_context
+            + "\nCURRENT PROJECT OVERRIDE: Trading is the active project and is running autonomous paper/shadow validation. "
+              "Do not describe persistent-memory/Project-State work as the active checkpoint and do not say trading is queued. "
+              "Persistent memory is completed infrastructure. The current next action is continued shadow validation plus technical audit until the validation gate is satisfied."
+        )
     for item in req.history[-16:]:
         role, text = item.get("role"), item.get("text", "")
         if role in {"user", "assistant"} and text:

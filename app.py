@@ -181,7 +181,12 @@ def persistent_workspace_context(message: str, recent_history: list[dict[str, st
 
     if not chunks:
         return ""
-    project_state = load_project_state()\n    state_context = ""\n    if project_state.get("active"):\n        state_context = "EXPLICIT ACTIVE PROJECT STATE (highest priority):\\n" + json.dumps(project_state["active"], ensure_ascii=False) + "\\n\\n"\n    return (\n        state_context + "PERSISTENT WORKSPACE MEMORY. Saved conversations are ordered by recency: recency=0 is newest. "
+    project_state = load_project_state()
+    state_context = ""
+    if project_state.get("active"):
+        state_context = "EXPLICIT ACTIVE PROJECT STATE (highest priority):\\n" + json.dumps(project_state["active"], ensure_ascii=False) + "\\n\\n"
+    return (
+        state_context + "PERSISTENT WORKSPACE MEMORY. Saved conversations are ordered by recency: recency=0 is newest. "
         "For continuation/handover questions, treat the newest concrete checkpoint/status as the source of truth. "
         "Older conversations are historical evidence only and must not override a newer checkpoint. "
         "If newer messages say a bug/phase/task is fixed, completed, deployed, or moved forward, do not report the older state as current. "

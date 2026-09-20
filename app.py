@@ -79,7 +79,7 @@ def save_conversation(req: ConversationRequest):
     with CONV_LOCK:
         items = load_conversations()
         cid = req.id or uuid.uuid4().hex
-        value = {"id":cid,"title":req.title or "Percakapan baru","messages":req.messages[-200:],"updated_at":int(time.time())}
+        value = {"id":cid,"title":req.title or "Percakapan baru","messages":req.messages[-200:],"updated_at":int(req.updated_at or time.time())}
         items = [x for x in items if x.get("id") != cid]
         items.insert(0,value)
         tmp=CONV_STORE.with_suffix(".tmp");tmp.write_text(json.dumps(items[:100],ensure_ascii=False,indent=2),"utf-8");tmp.replace(CONV_STORE)
@@ -91,6 +91,8 @@ def persistent_workspace_context(message: str, recent_history: list[dict[str, st
     conversations = load_conversations()
     if not conversations:
         return ""
+    # Sort by the conversation's real last-change timestamp, not storage-list position.
+    conversations = sorted(conversations, key=lambda x: int(x.get("updated_at") or 0), reverse=True)
 
     query_text = " ".join(
         [message] + [str(x.get("text", "")) for x in recent_history[-6:]]

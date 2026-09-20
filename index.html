@@ -128,8 +128,6 @@ button{font:inherit;color:inherit}
 }
 .composer:focus-within{border-color:var(--active-line)}
 .composer input{flex:1;min-width:0;background:none;border:0;outline:none;color:var(--text);font:inherit;font-size:17px;padding:8px 0}
-.attach-btn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--dim);font-size:25px;line-height:1;cursor:pointer}.attach-btn:hover{color:var(--text);border-color:var(--active-line)}
-.attachment-strip{width:100%;max-width:1040px;display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0}.attachment-chip{display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:12px}.attachment-chip button{border:0;background:none;color:var(--dim);cursor:pointer}
 .composer input::placeholder{color:var(--dim)}
 .send{
   width:46px;height:46px;border-radius:50%;border:0;cursor:pointer;flex:none;display:grid;place-items:center;color:#fff;
@@ -281,12 +279,9 @@ button{font:inherit;color:inherit}
       </div>
       <div class="thread" id="thread" role="log" aria-live="polite" aria-label="Conversation"></div>
       <div class="composer">
-        <input id="filePick" type="file" multiple hidden accept="image/*,.pdf,.docx,.txt,.md,.csv,.json,.py,.js,.html,.css">
-        <button class="attach-btn" id="attachBtn" type="button" aria-label="Attach file" title="Attach image or document">+</button>
         <input id="ask" type="text" placeholder="Ask BimaGinga anything…" aria-label="Ask BimaGinga anything" autocomplete="off">
         <button class="send" id="send" aria-label="Send message"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-send"/></svg></button>
       </div>
-      <div class="attachment-strip" id="attachmentStrip"></div>
       <p class="demo-note" id="statusNote">BimaGinga Live Core</p>
     </section>
 
@@ -386,7 +381,7 @@ button{font:inherit;color:inherit}
   if(state.theme!=='light'&&state.theme!=='dark') state.theme='dark';
   state.cur=newConv();
 
-  var home=$('#view-home'),thread=$('#thread'),ask=$('#ask'),typing=null,pendingAttachments=[];
+  var home=$('#view-home'),thread=$('#thread'),ask=$('#ask'),typing=null;
 
   /* ---------- Theme & name ---------- */
   function applyTheme(t){
@@ -395,10 +390,7 @@ button{font:inherit;color:inherit}
     $('#thLight').setAttribute('aria-pressed',t==='light'?'true':'false');
   }
   function greeting(){
-    var h;
-    try{h=parseInt(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Jakarta',hour:'2-digit',hour12:false}).format(new Date()),10);}
-    catch(e){h=new Date().getHours();}
-    var p=h<12?'morning':(h<18?'afternoon':'evening');
+    var h=new Date().getHours(),p=h<12?'morning':(h<18?'afternoon':'evening');
     $('#greet').textContent='Good '+p+', '+state.name+'.';
     $('#meName').textContent=state.name;
   }
@@ -444,7 +436,7 @@ button{font:inherit;color:inherit}
   }
   function renderRecent(){var box=$('#recentChats');if(!box)return;box.textContent='';state.convs.slice(0,12).forEach(function(conv){var b=document.createElement('button');b.className='recent-chat'+(state.cur&&state.cur.id===conv.id?' active':'');b.textContent=conv.title||'Percakapan baru';b.title=b.textContent;b.addEventListener('click',function(){saveCur();state.cur=conv;showView('home');renderThread();renderRecent();});box.appendChild(b);});}
   async function syncConversation(conv){try{await fetch('/api/conversations/'+encodeURIComponent(conv.id),{method:'PUT',headers:apiHeaders(),body:JSON.stringify({id:conv.id,title:conv.title,messages:conv.messages,updated_at:Date.now()})});}catch(e){}}
-  async function loadServerConversations(){try{var r=await fetch('/api/conversations',{headers:apiHeaders()});if(!r.ok){console.warn('Conversation history load failed',r.status);renderRecent();return;}var d=await r.json();if(Array.isArray(d.conversations)&&d.conversations.length){var by={};state.convs.forEach(function(x){by[x.id]=x;});d.conversations.forEach(function(x){if(by[x.id])return;var same=state.convs.find(function(y){var a=(y.messages||[])[0],b=(x.messages||[])[0];return a&&b&&a.role===b.role&&a.text===b.text;});if(same){if((x.updated_at||0)*1000>(same.t||0)){same.messages=x.messages||same.messages;same.title=x.title||same.title;same.t=(x.updated_at||0)*1000;}by[x.id]=same;return;}state.convs.push({id:x.id,title:x.title,messages:x.messages||[],t:(x.updated_at||0)*1000});});var seen={};state.convs=state.convs.filter(function(x){var a=(x.messages||[])[0];var key=a?(a.role+'|'+a.text):('id|'+x.id);if(seen[key])return false;seen[key]=1;return true;});state.convs.sort(function(a,b){return (b.t||0)-(a.t||0);});store.set('bg:convs',state.convs);renderRecent();}else{renderRecent();}}catch(e){console.warn('Conversation history load error',e);renderRecent();}}
+  async function loadServerConversations(){try{var r=await fetch('/api/conversations',{headers:apiHeaders()});if(!r.ok)return;var d=await r.json();if(Array.isArray(d.conversations)&&d.conversations.length){var by={};state.convs.forEach(function(x){by[x.id]=x;});d.conversations.forEach(function(x){if(by[x.id])return;var same=state.convs.find(function(y){var a=(y.messages||[])[0],b=(x.messages||[])[0];return a&&b&&a.role===b.role&&a.text===b.text;});if(same){if((x.updated_at||0)*1000>(same.t||0)){same.messages=x.messages||same.messages;same.title=x.title||same.title;same.t=(x.updated_at||0)*1000;}by[x.id]=same;return;}state.convs.push({id:x.id,title:x.title,messages:x.messages||[],t:(x.updated_at||0)*1000});});var seen={};state.convs=state.convs.filter(function(x){var a=(x.messages||[])[0];var key=a?(a.role+'|'+a.text):('id|'+x.id);if(seen[key])return false;seen[key]=1;return true;});state.convs.sort(function(a,b){return (b.t||0)-(a.t||0);});store.set('bg:convs',state.convs);renderRecent();}}catch(e){}}
   function saveCur(){
     var c=state.cur; if(!c.messages.length) return;
     c.t=Date.now();
@@ -471,19 +463,17 @@ button{font:inherit;color:inherit}
     }
     throw new Error('Task masih berjalan. Status tersimpan di server dan dapat dilanjutkan setelah reconnect.');
   }
-  function renderAttachments(){var box=$('#attachmentStrip');if(!box)return;box.textContent='';pendingAttachments.forEach(function(a,i){var chip=document.createElement('span');chip.className='attachment-chip';chip.textContent=a.name;var x=document.createElement('button');x.type='button';x.textContent='×';x.onclick=function(){pendingAttachments.splice(i,1);renderAttachments();};chip.appendChild(x);box.appendChild(chip);});}
-  function addFiles(files){Array.from(files||[]).slice(0,5-pendingAttachments.length).forEach(function(file){if(file.size>8*1024*1024)return;var reader=new FileReader();reader.onload=function(){pendingAttachments.push({name:file.name,type:file.type||'application/octet-stream',data:String(reader.result).split(',',2)[1]||''});renderAttachments();};reader.readAsDataURL(file);});}
-
   async function send(text,skill){
     text=(text||'').trim(); if(!text) return;
     if(skill&&SKILLS[skill]) state.activeSkill=skill;
     showView('home');finishTyping();
     var c=state.cur; if(!c.title) c.title=text.length>52?text.slice(0,52)+'…':text;
-    var history=apiHistory();\n    var attachments=pendingAttachments.slice();pendingAttachments=[];renderAttachments();\n    c.messages.push({role:'user',text:text,skill:state.activeSkill,attachments:attachments.map(function(a){return {name:a.name,type:a.type};})});
+    var history=apiHistory();
+    c.messages.push({role:'user',text:text,skill:state.activeSkill});
     saveCur();home.classList.remove('empty');home.classList.add('chatting');renderThread();ask.value='';
     var mm=makeMsg('ai','BimaGinga sedang berpikir…');thread.appendChild(mm.row);thread.scrollTop=thread.scrollHeight;
     try{
-      var res=await fetch('/api/chat',{method:'POST',headers:apiHeaders(),body:JSON.stringify({message:text,skill:state.activeSkill,history:history,active_task_id:state.activeTaskId,attachments:attachments})});
+      var res=await fetch('/api/chat',{method:'POST',headers:apiHeaders(),body:JSON.stringify({message:text,skill:state.activeSkill,history:history,active_task_id:state.activeTaskId})});
       var data={};try{data=await res.json();}catch(e){}
       if(!res.ok) throw new Error(data.detail||('HTTP '+res.status));
       var reply=data.answer||'BimaGinga tidak menerima jawaban dari model.';
@@ -500,9 +490,6 @@ button{font:inherit;color:inherit}
       mm.bubble.textContent='Live Core belum tersedia: '+err.message;
     }
   }
-  $('#attachBtn').addEventListener('click',function(){ $('#filePick').click(); });
-  $('#filePick').addEventListener('change',function(e){addFiles(e.target.files);e.target.value='';});
-  document.addEventListener('paste',function(e){var files=[];Array.from((e.clipboardData&&e.clipboardData.items)||[]).forEach(function(it){if(it.kind==='file'){var f=it.getAsFile();if(f)files.push(f);}});if(files.length)addFiles(files);});
   function newChat(){
     finishTyping();saveCur();state.cur=newConv();state.activeSkill='custom_task';state.activeTaskId=null;renderThread();renderRecent();showView('home');ask.value='';
     if(!matchMedia('(max-width:820px)').matches) ask.focus();

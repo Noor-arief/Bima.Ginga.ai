@@ -478,7 +478,9 @@ button{font:inherit;color:inherit}
     var c=state.cur; if(!c.title) c.title=text.length>52?text.slice(0,52)+'…':text;
     var history=apiHistory();
     var attachments=pendingAttachments.slice();pendingAttachments=[];renderAttachments();
-    c.messages.push({role:'user',text:text||('[Attached '+attachments.length+' file(s)]'),skill:state.activeSkill});
+    var attachmentLabel=attachments.map(function(a){return '📎 '+a.name;}).join('\n');
+    var userDisplay=(attachmentLabel?(attachmentLabel+(text?'\n\n':'')):'')+(text||(!attachments.length?'':'Attached file'));
+    c.messages.push({role:'user',text:userDisplay,skill:state.activeSkill});
     saveCur();home.classList.remove('empty');home.classList.add('chatting');renderThread();ask.value='';
     var mm=makeMsg('ai','BimaGinga sedang berpikir…');thread.appendChild(mm.row);thread.scrollTop=thread.scrollHeight;
     try{

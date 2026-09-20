@@ -395,7 +395,10 @@ button{font:inherit;color:inherit}
     $('#thLight').setAttribute('aria-pressed',t==='light'?'true':'false');
   }
   function greeting(){
-    var h=new Date().getHours(),p=h<12?'morning':(h<18?'afternoon':'evening');
+    var h;
+    try{h=parseInt(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Jakarta',hour:'2-digit',hour12:false}).format(new Date()),10);}
+    catch(e){h=new Date().getHours();}
+    var p=h<12?'morning':(h<18?'afternoon':'evening');
     $('#greet').textContent='Good '+p+', '+state.name+'.';
     $('#meName').textContent=state.name;
   }

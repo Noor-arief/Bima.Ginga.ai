@@ -63,9 +63,16 @@ CONV_LOCK = threading.RLock()
 
 def load_conversations():
     with CONV_LOCK:
-        if not CONV_STORE.exists(): return []
-        try: return json.loads(CONV_STORE.read_text("utf-8"))
-        except Exception: return []
+        if not CONV_STORE.exists():
+            print(f"[history] store_missing path={CONV_STORE}", flush=True)
+            return []
+        try:
+            items = json.loads(CONV_STORE.read_text("utf-8"))
+            print(f"[history] loaded count={len(items) if isinstance(items, list) else 0} path={CONV_STORE}", flush=True)
+            return items if isinstance(items, list) else []
+        except Exception as exc:
+            print(f"[history] load_failed path={CONV_STORE} error={type(exc).__name__}", flush=True)
+            return []
 
 def save_conversation(req: ConversationRequest):
     with CONV_LOCK:

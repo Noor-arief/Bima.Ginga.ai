@@ -81,7 +81,7 @@ class TaskRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=12000)
     skill: Literal["write_improve","code_debug","analyze_data","plan_strategize","learn_research","custom_task"] = "custom_task"
 
-def model_answer(prompt: str) -> tuple[str, str]:
+def model_answer(prompt: str, images: list[Attachment] | None = None) -> tuple[str, str]:
     deepseek_key = os.getenv("DEEPSEEK_API_KEY")
     gemini_key = os.getenv("GEMINI_API_KEY")
     if not deepseek_key and not gemini_key:
@@ -89,8 +89,7 @@ def model_answer(prompt: str) -> tuple[str, str]:
     primary = os.getenv("BIMA_PRIMARY_PROVIDER", "deepseek").strip().lower()
     order = [primary] + [x.strip().lower() for x in os.getenv("BIMA_FALLBACK_PROVIDERS", "gemini,deepseek").split(",")]
     order = list(dict.fromkeys(order))
-    errors = []
-    for provider in order:
+    errors = []\n    images = images or []\n    if images and gemini_key and genai is not None:\n        try:\n            client = genai.Client(api_key=gemini_key)\n            contents = [prompt]\n            for image in images:\n                raw = base64.b64decode(image.data.split(",", 1)[-1], validate=True)\n                contents.append(genai.types.Part.from_bytes(data=raw, mime_type=image.type))\n            response = client.models.generate_content(model=os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), contents=contents)\n            answer = (response.text or "").strip()\n            if answer:\n                return answer, "gemini-vision"\n        except Exception as exc:\n            errors.append("gemini-vision: " + str(exc))\n    for provider in order:
         try:
             if provider == "deepseek" and deepseek_key:
                 client = OpenAI(api_key=deepseek_key, base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"))
@@ -215,10 +214,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         role, text = item.get("role"), item.get("text", "")
         if role in {"user", "assistant"} and text:
             transcript.append(("ARIF: " if role == "user" else "BIMA: ") + text[:12000])
-    attachment_text = attachment_context(req.attachments)
-    transcript.append("ARIF: " + req.message + (("\n\nATTACHMENTS:\n" + attachment_text) if attachment_text else ""))
-    try:
-        answer, provider = model_answer("\n\n".join(transcript))
+    attachment_text = attachment_context(req.attachments)\n    image_items = [item for item in req.attachments if item.type.startswith("image/")]\n    transcript.append("ARIF: " + req.message + (("\\n\\nATTACHMENTS:\\n" + attachment_text) if attachment_text else ""))\n    try:\n        answer, provider = model_answer("\\n\\n".join(transcript), images=image_items)
         return {"answer": answer, "skill": req.skill, "provider": provider, "mode": "live-core-v2"}
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc))

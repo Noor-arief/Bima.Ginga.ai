@@ -200,7 +200,6 @@ def index():
 
 @app.post("/api/chat")
 def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
-    require_owner(x_bima_key)
     active_task = get_task(req.active_task_id) if req.active_task_id else None
     active_execution = bool(active_task and active_task.get("state") in {"queued", "running"})
     decision = route_message(req.message, active_task=active_execution)
@@ -210,6 +209,9 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     if req.skill in advisory_skills:
         decision = type(decision)("chat", "advisory skill handles requested deliverable in conversation")
     if decision.kind == "execution":
+        # Privileged execution remains owner-protected; ordinary BIMA chat must not
+        # require a server-only secret that the browser cannot possess.
+        require_owner(x_bima_key)
         if active_execution and is_continuation(req.message):
             return {
                 "answer": "Task yang aktif masih berjalan. BIMA melanjutkan task yang sama.",

@@ -86,6 +86,41 @@ def save_conversation(req: ConversationRequest):
         return value
 
 
+PROJECT_STATE_STORE = Path(os.getenv("BIMAGINGA_DATA_DIR", "/data")) / "project_state.json"
+PROJECT_STATE_LOCK = threading.RLock()
+
+def load_project_state() -> dict:
+    with PROJECT_STATE_LOCK:
+        if not PROJECT_STATE_STORE.exists():
+            return {}
+        try:
+            value = json.loads(PROJECT_STATE_STORE.read_text("utf-8"))
+            return value if isinstance(value, dict) else {}
+        except Exception as exc:
+            print(f"[project_state] load_failed error={type(exc).__name__}", flush=True)
+            return {}
+
+def save_project_state(value: dict) -> None:
+    with PROJECT_STATE_LOCK:
+        tmp = PROJECT_STATE_STORE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2), "utf-8")
+        tmp.replace(PROJECT_STATE_STORE)
+
+def update_project_state_from_turn(message: str, answer: str) -> None:
+    project_signal = bool(re.search(
+        r"\b(project|proyek|checkpoint|phase|fase|deploy|deployment|repo|github|railway|bima|trading|treding|handover|ho|bug|fix|fixed|selesai|lanjut)\b",
+        (message + "\n" + answer).lower(),
+    ))
+    if not project_signal:
+        return
+    state = load_project_state()
+    state["active"] = {
+        "updated_at": int(time.time()),
+        "last_user_message": message[-6000:],
+        "last_assistant_result": answer[-10000:],
+    }
+    save_project_state(state)
+
 def persistent_workspace_context(message: str, recent_history: list[dict[str, str]]) -> str:
     """Retrieve durable cross-session workspace state from persisted conversations."""
     conversations = load_conversations()
@@ -146,8 +181,7 @@ def persistent_workspace_context(message: str, recent_history: list[dict[str, st
 
     if not chunks:
         return ""
-    return (
-        "PERSISTENT WORKSPACE MEMORY. Saved conversations are ordered by recency: recency=0 is newest. "
+    project_state = load_project_state()\n    state_context = ""\n    if project_state.get("active"):\n        state_context = "EXPLICIT ACTIVE PROJECT STATE (highest priority):\\n" + json.dumps(project_state["active"], ensure_ascii=False) + "\\n\\n"\n    return (\n        state_context + "PERSISTENT WORKSPACE MEMORY. Saved conversations are ordered by recency: recency=0 is newest. "
         "For continuation/handover questions, treat the newest concrete checkpoint/status as the source of truth. "
         "Older conversations are historical evidence only and must not override a newer checkpoint. "
         "If newer messages say a bug/phase/task is fixed, completed, deployed, or moved forward, do not report the older state as current. "
@@ -325,8 +359,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
                                   "Read and use it as the source of truth. Do not claim you can only see the filename when extracted content is present.")
     transcript.append("ARIF: " + req.message + attachment_instruction + (("\n\nATTACHMENTS:\n" + attachment_text) if attachment_text else ""))
     try:
-        answer, provider = model_answer("\n\n".join(transcript), images=image_items)
-        return {"answer": answer, "skill": req.skill, "provider": provider, "mode": "live-core-v2"}
+        answer, provider = model_answer("\n\n".join(transcript), images=image_items)\n        update_project_state_from_turn(req.message, answer)\n        return {"answer": answer, "skill": req.skill, "provider": provider, "mode": "live-core-v2"}
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 

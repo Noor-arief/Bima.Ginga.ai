@@ -84,6 +84,76 @@ def save_conversation(req: ConversationRequest):
         tmp=CONV_STORE.with_suffix(".tmp");tmp.write_text(json.dumps(items[:100],ensure_ascii=False,indent=2),"utf-8");tmp.replace(CONV_STORE)
         return value
 
+
+def persistent_workspace_context(message: str, recent_history: list[dict[str, str]]) -> str:
+    """Retrieve durable cross-session context from persisted conversations.
+
+    This is intentionally read-only: conversation persistence remains the source of truth.
+    It gives BIMA continuity across new browser sessions without dumping the whole store
+    into every model request.
+    """
+    conversations = load_conversations()
+    if not conversations:
+        return ""
+
+    query_text = " ".join(
+        [message] + [str(x.get("text", "")) for x in recent_history[-6:]]
+    ).lower()
+    stop = {
+        "yang","dan","atau","ini","itu","gue","lo","aku","saya","kita","bima","jadi",
+        "udah","sudah","belum","mau","bisa","gak","nggak","aja","lagi","dari","untuk",
+        "dengan","di","ke","ya","apa","kalau","terus","lanjut","project","proyek"
+    }
+    terms = {
+        token for token in re.findall(r"[a-zA-Z0-9_.-]{3,}", query_text)
+        if token not in stop
+    }
+    continuation = bool(re.search(
+        r"\b(lanjut|lanjutkan|terus|project kita|proyek kita|yang tadi|sebelumnya|handover|\bho\b)\b",
+        query_text,
+    ))
+
+    ranked = []
+    for recency, conv in enumerate(conversations[:50]):
+        title = str(conv.get("title", ""))
+        messages = conv.get("messages") or []
+        searchable = (title + " " + " ".join(str(m.get("text", "")) for m in messages[-40:])).lower()
+        score = sum(3 if term in title.lower() else 1 for term in terms if term in searchable)
+        # Generic continuation needs recent workspace state even when the new message
+        # contains no useful retrieval keywords.
+        if continuation and recency < 8:
+            score += max(1, 8 - recency)
+        if score > 0:
+            ranked.append((score, -recency, title, messages))
+
+    ranked.sort(reverse=True)
+    chunks = []
+    budget = 32000
+    for _, _, title, messages in ranked[:8]:
+        selected = messages[-24:]
+        body = "\n".join(
+            ("ARIF: " if m.get("role") == "user" else "BIMA: ") + str(m.get("text", ""))[:4000]
+            for m in selected if m.get("role") in {"user", "assistant"} and m.get("text")
+        )
+        chunk = f"[Conversation: {title or 'Percakapan'}]\n{body}".strip()
+        if not chunk:
+            continue
+        if len(chunk) > budget:
+            chunk = chunk[-budget:]
+        chunks.append(chunk)
+        budget -= len(chunk)
+        if budget <= 0:
+            break
+
+    if not chunks:
+        return ""
+    return (
+        "PERSISTENT WORKSPACE MEMORY (cross-session, retrieved from saved conversations). "
+        "Use this to continue existing work. Prefer concrete checkpoints/decisions in this memory "
+        "over asking Arif to repeat context. Do not claim the memory is unavailable when relevant "
+        "context is present.\n\n" + "\n\n".join(chunks)
+    )
+
 class TaskRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=12000)
     skill: Literal["write_improve","code_debug","analyze_data","plan_strategize","learn_research","custom_task"] = "custom_task"
@@ -239,6 +309,9 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         "Active skill: " + SKILLS[req.skill]
     )
     transcript = [system]
+    persistent_context = persistent_workspace_context(req.message, req.history)
+    if persistent_context:
+        transcript.append(persistent_context)
     for item in req.history[-16:]:
         role, text = item.get("role"), item.get("text", "")
         if role in {"user", "assistant"} and text:

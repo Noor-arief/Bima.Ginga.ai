@@ -252,8 +252,7 @@ def task(task_id: str, x_bima_key: str | None = Header(default=None)):
     return value
 
 @app.get("/api/conversations")
-def conversations(x_bima_key: str | None = Header(default=None)):
-    require_owner(x_bima_key)
+def conversations():
     return {"conversations": load_conversations()}
 
 @app.put("/api/conversations/{conversation_id}")

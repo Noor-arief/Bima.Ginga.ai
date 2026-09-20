@@ -89,7 +89,22 @@ def model_answer(prompt: str, images: list[Attachment] | None = None) -> tuple[s
     primary = os.getenv("BIMA_PRIMARY_PROVIDER", "deepseek").strip().lower()
     order = [primary] + [x.strip().lower() for x in os.getenv("BIMA_FALLBACK_PROVIDERS", "gemini,deepseek").split(",")]
     order = list(dict.fromkeys(order))
-    errors = []\n    images = images or []\n    if images and gemini_key and genai is not None:\n        try:\n            client = genai.Client(api_key=gemini_key)\n            contents = [prompt]\n            for image in images:\n                raw = base64.b64decode(image.data.split(",", 1)[-1], validate=True)\n                contents.append(genai.types.Part.from_bytes(data=raw, mime_type=image.type))\n            response = client.models.generate_content(model=os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), contents=contents)\n            answer = (response.text or "").strip()\n            if answer:\n                return answer, "gemini-vision"\n        except Exception as exc:\n            errors.append("gemini-vision: " + str(exc))\n    for provider in order:
+    errors = []
+    images = images or []
+    if images and gemini_key and genai is not None:
+        try:
+            client = genai.Client(api_key=gemini_key)
+            contents = [prompt]
+            for image in images:
+                raw = base64.b64decode(image.data.split(",", 1)[-1], validate=True)
+                contents.append(genai.types.Part.from_bytes(data=raw, mime_type=image.type))
+            response = client.models.generate_content(model=os.getenv("GEMINI_MODEL", "gemini-3.6-flash"), contents=contents)
+            answer = (response.text or "").strip()
+            if answer:
+                return answer, "gemini-vision"
+        except Exception as exc:
+            errors.append("gemini-vision: " + str(exc))
+    for provider in order:
         try:
             if provider == "deepseek" and deepseek_key:
                 client = OpenAI(api_key=deepseek_key, base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"))

@@ -221,8 +221,11 @@ def persistent_workspace_context(message: str, recent_history: list[dict[str, st
         return ""
     project_state = load_project_state()
     state_context = ""
-    if project_state.get("active"):
-        state_context = "EXPLICIT ACTIVE PROJECT STATE (highest priority):\\n" + json.dumps(project_state["active"], ensure_ascii=False) + "\\n\\n"
+    active_state = project_state.get("active")
+    if active_state:
+        state_age = int(time.time()) - int(active_state.get("updated_at") or 0)
+        if state_age <= 7 * 24 * 60 * 60:
+            state_context = "EXPLICIT ACTIVE PROJECT STATE (highest priority):\\n" + json.dumps(active_state, ensure_ascii=False) + "\\n\\n"
     return (
         state_context + "PERSISTENT WORKSPACE MEMORY. Saved conversations are ordered by recency: recency=0 is newest. "
         "For continuation/handover questions, treat the newest concrete checkpoint/status as the source of truth. "

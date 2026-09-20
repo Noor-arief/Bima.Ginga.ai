@@ -130,7 +130,7 @@ def model_answer(prompt: str, images: list[Attachment] | None = None) -> tuple[s
                     return answer, "gemini"
         except Exception as exc:
             errors.append(provider + ": " + str(exc))
-    raise RuntimeError("All configured model providers failed: " + " | ".join(errors))
+    detail = " | ".join(errors)\n    print(f"[model] all_providers_failed {detail}", flush=True)\n    raise RuntimeError("All configured model providers failed: " + detail)
 
 
 def attachment_context(items: list[Attachment]) -> str:

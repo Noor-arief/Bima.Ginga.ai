@@ -2,6 +2,8 @@ import os
 import threading
 from pathlib import Path
 from typing import Literal
+import base64
+import io
 import json
 import time
 import uuid
@@ -9,6 +11,8 @@ import uuid
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from pypdf import PdfReader
+from docx import Document
 from openai import OpenAI
 try:
     from google import genai
@@ -31,11 +35,17 @@ SKILLS = {
     "custom_task": "Handle cross-skill multi-step work and continue until completed, blocked, failed, or approval is required.",
 }
 
+class Attachment(BaseModel):
+    name: str = Field(..., max_length=255)
+    type: str = Field(default="application/octet-stream", max_length=120)
+    data: str = Field(..., max_length=14000000)
+
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=12000)
     skill: Literal["write_improve","code_debug","analyze_data","plan_strategize","learn_research","custom_task"] = "custom_task"
     history: list[dict[str, str]] = Field(default_factory=list)
     active_task_id: str | None = None
+    attachments: list[Attachment] = Field(default_factory=list, max_length=5)
 
 def require_owner(x_bima_key: str | None):
     expected = os.getenv("BIMAGINGA_OWNER_KEY")
@@ -100,6 +110,42 @@ def model_answer(prompt: str) -> tuple[str, str]:
         except Exception as exc:
             errors.append(provider + ": " + str(exc))
     raise RuntimeError("All configured model providers failed: " + " | ".join(errors))
+
+
+def attachment_context(items: list[Attachment]) -> str:
+    if not items:
+        return ""
+    parts = []
+    for item in items:
+        try:
+            raw = base64.b64decode(item.data.split(",", 1)[-1], validate=True)
+        except Exception:
+            parts.append(f"[Attachment {item.name}: invalid data]")
+            continue
+        if len(raw) > 8 * 1024 * 1024:
+            parts.append(f"[Attachment {item.name}: exceeds 8 MB limit]")
+            continue
+        text = ""
+        try:
+            if item.type == "application/pdf" or item.name.lower().endswith(".pdf"):
+                reader = PdfReader(io.BytesIO(raw))
+                text = "\\n".join((p.extract_text() or "") for p in reader.pages[:40])
+            elif item.name.lower().endswith(".docx"):
+                doc = Document(io.BytesIO(raw))
+                text = "\\n".join(p.text for p in doc.paragraphs)
+            elif item.type.startswith("text/") or item.name.lower().endswith((".txt",".md",".csv",".json",".py",".js",".html",".css")):
+                text = raw.decode("utf-8", errors="replace")
+            elif item.type.startswith("image/"):
+                parts.append(f"[Image attachment: {item.name}. Image bytes received; current text provider path cannot inspect pixels yet.]")
+                continue
+            else:
+                parts.append(f"[Attachment {item.name}: unsupported content type {item.type}]")
+                continue
+        except Exception as exc:
+            parts.append(f"[Attachment {item.name}: parse failed: {exc}]")
+            continue
+        parts.append(f"[Attachment: {item.name}]\\n{text[:50000]}")
+    return "\\n\\n".join(parts)
 
 def run_task(task_id: str):
     task = get_task(task_id)
@@ -169,8 +215,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         role, text = item.get("role"), item.get("text", "")
         if role in {"user", "assistant"} and text:
             transcript.append(("ARIF: " if role == "user" else "BIMA: ") + text[:12000])
-    transcript.append("ARIF: " + req.message)
-    try:
+    attachment_text = attachment_context(req.attachments)\n    transcript.append("ARIF: " + req.message + (("\\n\\nATTACHMENTS:\\n" + attachment_text) if attachment_text else ""))\n    try:
         answer, provider = model_answer("\n\n".join(transcript))
         return {"answer": answer, "skill": req.skill, "provider": provider, "mode": "live-core-v2"}
     except RuntimeError as exc:

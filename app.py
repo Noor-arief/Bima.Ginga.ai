@@ -129,10 +129,10 @@ def attachment_context(items: list[Attachment]) -> str:
         try:
             if item.type == "application/pdf" or item.name.lower().endswith(".pdf"):
                 reader = PdfReader(io.BytesIO(raw))
-                text = "\\n".join((p.extract_text() or "") for p in reader.pages[:40])
+                text = "\n".join((p.extract_text() or "") for p in reader.pages[:40])
             elif item.name.lower().endswith(".docx"):
                 doc = Document(io.BytesIO(raw))
-                text = "\\n".join(p.text for p in doc.paragraphs)
+                text = "\n".join(p.text for p in doc.paragraphs)
             elif item.type.startswith("text/") or item.name.lower().endswith((".txt",".md",".csv",".json",".py",".js",".html",".css")):
                 text = raw.decode("utf-8", errors="replace")
             elif item.type.startswith("image/"):
@@ -144,8 +144,8 @@ def attachment_context(items: list[Attachment]) -> str:
         except Exception as exc:
             parts.append(f"[Attachment {item.name}: parse failed: {exc}]")
             continue
-        parts.append(f"[Attachment: {item.name}]\\n{text[:50000]}")
-    return "\\n\\n".join(parts)
+        parts.append(f"[Attachment: {item.name}]\n{text[:50000]}")
+    return "\n\n".join(parts)
 
 def run_task(task_id: str):
     task = get_task(task_id)

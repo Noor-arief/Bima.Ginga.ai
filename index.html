@@ -488,17 +488,11 @@ button{font:inherit;color:inherit}
       var reply=data.answer||'BimaGinga tidak menerima jawaban dari model.';
       if(data.task&&data.task.id){
         state.activeTaskId=data.task.id;
-        mm.bubble.textContent=reply+'
-
-Status: '+data.task.state;
+        mm.bubble.textContent=reply+'\n\nStatus: '+data.task.state;
         var done=await waitForTask(data.task.id);
         state.activeTaskId=null;
-        if(done.state==='completed'&&done.result&&done.result.answer) reply=done.result.answer+'
-
-Status: COMPLETED';
-        else { var detail=(done.result&&done.result.answer)?done.result.answer:(done.error||'Task berhenti tanpa detail.'); reply='Status: '+done.state.toUpperCase()+'
-
-'+detail; }
+        if(done.state==='completed'&&done.result&&done.result.answer) reply=done.result.answer+'\n\nStatus: COMPLETED';
+        else { var detail=(done.result&&done.result.answer)?done.result.answer:(done.error||'Task berhenti tanpa detail.'); reply='Status: '+done.state.toUpperCase()+'\n\n'+detail; }
       }
       c.messages.push({role:'ai',text:reply});saveCur();renderThread();
     }catch(err){

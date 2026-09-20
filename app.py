@@ -274,7 +274,8 @@ def conversations():
     return {"conversations": load_conversations()}
 
 @app.put("/api/conversations/{conversation_id}")
-def put_conversation(conversation_id: str, req: ConversationRequest, x_bima_key: str | None = Header(default=None)):
-    require_owner(x_bima_key)
+def put_conversation(conversation_id: str, req: ConversationRequest):
+    # Conversation persistence is part of the normal chat session, not an owner-only action.
+    # Keep owner authentication on privileged task/execution endpoints only.
     req.id = conversation_id
     return save_conversation(req)

@@ -364,7 +364,9 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
                                   "Read and use it as the source of truth. Do not claim you can only see the filename when extracted content is present.")
     transcript.append("ARIF: " + req.message + attachment_instruction + (("\n\nATTACHMENTS:\n" + attachment_text) if attachment_text else ""))
     try:
-        answer, provider = model_answer("\n\n".join(transcript), images=image_items)\n        update_project_state_from_turn(req.message, answer)\n        return {"answer": answer, "skill": req.skill, "provider": provider, "mode": "live-core-v2"}
+        answer, provider = model_answer("\\n\\n".join(transcript), images=image_items)
+        update_project_state_from_turn(req.message, answer)
+        return {"answer": answer, "skill": req.skill, "provider": provider, "mode": "live-core-v2"}
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 

@@ -393,26 +393,47 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         "Active skill: " + SKILLS[req.skill]
     )
     transcript = [system]
-    # Trading is the active BIMA project. New-chat continuity must not depend on
-    # whether the user's first short message happens to contain a trading keyword.
-    # Always fetch live trading state first; it is authoritative over saved chat.
-    trading_context = trading_runtime_context("trading shadow position pnl validation")
-    persistent_context = persistent_workspace_context(req.message, req.history)
+    # Conversation mode is inferred from the user's message, not forced by the
+    # existence of an active project. Casual chat must stay casual; project/runtime
+    # context is injected only when the user actually refers to it.
+    context_query = " ".join(
+        [req.message] + [str(x.get("text", "")) for x in req.history[-4:]]
+    ).lower()
+    trading_intent = bool(re.search(
+        r"\\b(trading|trade|paper|shadow|position|posisi|pnl|profit|loss|market|coin|meme|quant|jupiter|solana|wallet)\\b",
+        context_query,
+    ))
+    project_intent = trading_intent or bool(re.search(
+        r"\\b(project|proyek|checkpoint|phase|fase|deploy|deployment|repo|github|railway|roadmap|bug|fix|lanjut project|lanjut proyek)\\b",
+        context_query,
+    ))
+    casual_intent = bool(re.search(
+        r"\\b(ngobrol|cerita|curhat|capek|bosan|bosen|gabut|santai|random|halo|hai|pagi|siang|malam)\\b",
+        req.message.lower(),
+    )) and not project_intent
+
+    trading_context = trading_runtime_context(req.message) if trading_intent else ""
+    # Durable memory is useful for explicit continuation/project references, but
+    # broad project retrieval on casual new-chat messages causes stale checkpoint
+    # hijacking. Recent in-chat history remains available below in all modes.
+    persistent_context = persistent_workspace_context(req.message, req.history) if project_intent else ""
+
     if trading_context:
         transcript.append(
             trading_context
-            + "\nAUTHORITATIVE CURRENT PROJECT: BIMA Trading/Quant is the active project. "
-              "It is running autonomous paper/shadow validation now. "
-              "This live runtime block overrides conflicting saved conversations and old Project State. "
-              "Persistent memory/Project-State infrastructure is completed, not the active checkpoint. "
-              "Never tell Arif to choose between memory/state work and trading. "
-              "For a new chat, continue from this current trading runtime unless Arif explicitly changes topic."
+            + "\nAUTHORITATIVE TRADING CONTEXT: this live runtime overrides conflicting saved project checkpoints. "
+              "Persistent-memory/Project-State infrastructure is historical/completed, not the current trading checkpoint."
         )
     if persistent_context:
         transcript.append(
             persistent_context
-            + "\nIMPORTANT: this saved memory is historical continuity only. "
-              "If it conflicts with AUTHORITATIVE CURRENT PROJECT or live runtime, ignore the stale claim."
+            + "\nIMPORTANT: saved project memory is historical continuity only. "
+              "Prefer newer concrete checkpoints and live runtime over stale claims."
+        )
+    if casual_intent:
+        transcript.append(
+            "CONVERSATION MODE: CASUAL. Respond naturally to Arif's current message. "
+            "Do not mention projects, checkpoints, trading, memory systems, routing, or offer project work unless Arif brings them up."
         )
     for item in req.history[-16:]:
         role, text = item.get("role"), item.get("text", "")

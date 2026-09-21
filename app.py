@@ -391,10 +391,13 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         "Active skill: " + SKILLS[req.skill]
     )
     transcript = [system]
-    persistent_context = persistent_workspace_context(req.message, req.history)
+    trading_context = trading_runtime_context(req.message)
+    # For current trading questions, the live engine is the source of truth.
+    # Do not inject broad saved-conversation memory first: stale career/project
+    # conversations can otherwise dominate a short, direct trading question.
+    persistent_context = "" if trading_context else persistent_workspace_context(req.message, req.history)
     if persistent_context:
         transcript.append(persistent_context)
-    trading_context = trading_runtime_context(req.message)
     if trading_context:
         transcript.append(
             trading_context

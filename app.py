@@ -108,9 +108,12 @@ def save_project_state(value: dict) -> None:
         tmp.replace(PROJECT_STATE_STORE)
 
 def update_project_state_from_turn(message: str, answer: str) -> None:
+    # Assistant prose is not authoritative project state. Only persist a turn when
+    # the USER explicitly supplied project/checkpoint information; otherwise one
+    # stale/hallucinated answer can poison every future new chat.
     project_signal = bool(re.search(
         r"\b(project|proyek|checkpoint|phase|fase|deploy|deployment|repo|github|railway|bima|trading|treding|handover|ho|bug|fix|fixed|selesai|lanjut)\b",
-        (message + "\n" + answer).lower(),
+        message.lower(),
     ))
     if not project_signal:
         return
@@ -118,7 +121,6 @@ def update_project_state_from_turn(message: str, answer: str) -> None:
     state["active"] = {
         "updated_at": int(time.time()),
         "last_user_message": message[-6000:],
-        "last_assistant_result": answer[-10000:],
     }
     save_project_state(state)
 
@@ -391,19 +393,26 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         "Active skill: " + SKILLS[req.skill]
     )
     transcript = [system]
-    trading_context = trading_runtime_context(req.message)
-    # For current trading questions, the live engine is the source of truth.
-    # Do not inject broad saved-conversation memory first: stale career/project
-    # conversations can otherwise dominate a short, direct trading question.
-    persistent_context = "" if trading_context else persistent_workspace_context(req.message, req.history)
-    if persistent_context:
-        transcript.append(persistent_context)
+    # Trading is the active BIMA project. New-chat continuity must not depend on
+    # whether the user's first short message happens to contain a trading keyword.
+    # Always fetch live trading state first; it is authoritative over saved chat.
+    trading_context = trading_runtime_context("trading shadow position pnl validation")
+    persistent_context = persistent_workspace_context(req.message, req.history)
     if trading_context:
         transcript.append(
             trading_context
-            + "\nCURRENT PROJECT OVERRIDE: Trading is the active project and is running autonomous paper/shadow validation. "
-              "Do not describe persistent-memory/Project-State work as the active checkpoint and do not say trading is queued. "
-              "Persistent memory is completed infrastructure. The current next action is continued shadow validation plus technical audit until the validation gate is satisfied."
+            + "\nAUTHORITATIVE CURRENT PROJECT: BIMA Trading/Quant is the active project. "
+              "It is running autonomous paper/shadow validation now. "
+              "This live runtime block overrides conflicting saved conversations and old Project State. "
+              "Persistent memory/Project-State infrastructure is completed, not the active checkpoint. "
+              "Never tell Arif to choose between memory/state work and trading. "
+              "For a new chat, continue from this current trading runtime unless Arif explicitly changes topic."
+        )
+    if persistent_context:
+        transcript.append(
+            persistent_context
+            + "\nIMPORTANT: this saved memory is historical continuity only. "
+              "If it conflicts with AUTHORITATIVE CURRENT PROJECT or live runtime, ignore the stale claim."
         )
     for item in req.history[-16:]:
         role, text = item.get("role"), item.get("text", "")

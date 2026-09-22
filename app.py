@@ -163,7 +163,7 @@ def trading_runtime_context(message: str) -> str:
 
 def canonical_project_context(message: str) -> str:
     """Fetch canonical BIMA roadmap for current project/checkpoint questions."""
-    if not re.search(r"\b(project|proyek|checkpoint|check point|cek poin|poin|point|progress|progres|status|pending|roadmap|phase|fase|github|repo|prioritas|priority|sampai mana)\b", message.lower()):
+    if not re.search(r"\b(project|proyek|checkpoint|check point|cek poin|poin|point|progress|progres|status|pending|roadmap|phase|fase|github|repo|prioritas|priority|sampai mana|memory|memori|ingat|remember|lupa|forget|session|sesi|history|riwayat|handoff|hand\\s*off|ho|lanjut yang kemarin|terakhir kita)\b", message.lower()):
         return ""
     token = os.getenv("BIMA_GITHUB_TOKEN", "").strip() or os.getenv("GITHUB_TOKEN", "").strip()
     repo = os.getenv("BIMA_CANONICAL_REPO", "Noor-arief/BIMA").strip()

@@ -404,7 +404,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         context_query,
     ))
     project_intent = trading_intent or bool(re.search(
-        r"\\b(project|proyek|checkpoint|phase|fase|deploy|deployment|repo|github|railway|roadmap|bug|fix|lanjut project|lanjut proyek)\\b",
+        r"\\b(project|proyek|checkpoint|check point|poin|point|progress|status|phase|fase|deploy|deployment|repo|github|railway|roadmap|bug|fix|pending|selesai|lanjut project|lanjut proyek|project kita|proyek kita)\\b",
         context_query,
     ))
     casual_intent = bool(re.search(

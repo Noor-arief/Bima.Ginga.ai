@@ -161,6 +161,47 @@ def trading_runtime_context(message: str) -> str:
         print(f"[trading_status] unavailable error={type(exc).__name__}", flush=True)
         return "LIVE TRADING ENGINE STATUS: temporarily unavailable. Do not invent current trading metrics.\n"
 
+def canonical_project_context(message: str) -> str:
+    """Fetch canonical BIMA roadmap for current project/checkpoint questions."""
+    if not re.search(r"\\b(project|proyek|checkpoint|check point|cek poin|poin|point|progress|progres|status|pending|roadmap|phase|fase|github|repo|prioritas|priority|sampai mana)\\b", message.lower()):
+        return ""
+    token = os.getenv("BIMA_GITHUB_TOKEN", "").strip() or os.getenv("GITHUB_TOKEN", "").strip()
+    repo = os.getenv("BIMA_CANONICAL_REPO", "Noor-arief/BIMA").strip()
+    if not token:
+        return ""
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "BimaGinga-Workspace/1.0",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    chunks = []
+    for url, label in [
+        (f"https://api.github.com/repos/{repo}/issues/1", "MASTER ROADMAP ISSUE #1"),
+        (f"https://api.github.com/repos/{repo}/contents/ROADMAP.md", "ROADMAP.md"),
+    ]:
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=6) as response:
+                payload = json.loads(response.read(2_000_000).decode("utf-8"))
+            if label.startswith("MASTER"):
+                value = str(payload.get("body") or "")
+            else:
+                value = base64.b64decode(payload.get("content") or "").decode("utf-8", errors="replace")
+            if value:
+                chunks.append(f"[{label}]\\n{value[:30000]}")
+        except Exception as exc:
+            print(f"[canonical_project] {label} unavailable error={type(exc).__name__}", flush=True)
+    if not chunks:
+        return ""
+    return (
+        "CANONICAL BIMA PROJECT STATE — CURRENT SOURCE OF TRUTH. "
+        "Use this evidence for checkpoint/progress/pending/roadmap questions. "
+        "Do not say GitHub/repo access is unavailable when this block is present. "
+        "Newest explicit checkpoint overrides stale conversation memory.\\n\\n"
+        + "\\n\\n".join(chunks)
+    )
+
 def persistent_workspace_context(message: str, recent_history: list[dict[str, str]]) -> str:
     """Retrieve durable cross-session workspace state from persisted conversations."""
     conversations = load_conversations()
@@ -417,7 +458,10 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     # broad project retrieval on casual new-chat messages causes stale checkpoint
     # hijacking. Recent in-chat history remains available below in all modes.
     persistent_context = persistent_workspace_context(req.message, req.history) if project_intent else ""
+    canonical_context = canonical_project_context(req.message) if project_intent else ""
 
+    if canonical_context:
+        transcript.append(canonical_context)
     if trading_context:
         transcript.append(
             trading_context

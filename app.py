@@ -460,6 +460,16 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     persistent_context = persistent_workspace_context(req.message, req.history) if project_intent else ""
     canonical_context = canonical_project_context(req.message) if project_intent else ""
 
+    continuity_intent = bool(re.search(
+        r"\\b(memory|memori|ingat|remember|lupa|forget|session|sesi|history|riwayat|handoff|hand\\s*off|ho|checkpoint|check point|cek poin|poin|progress|progres|roadmap|lanjut yang kemarin|terakhir kita)\\b",
+        req.message.lower(),
+    ))
+    if continuity_intent and not canonical_context:
+        raise HTTPException(
+            status_code=503,
+            detail="Canonical BIMA continuity is temporarily unavailable. Refusing session-only fallback."
+        )
+
     if canonical_context:
         transcript.append(
             canonical_context

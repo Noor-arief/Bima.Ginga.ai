@@ -391,6 +391,16 @@ def startup():
 def health():
     return {"status": "ok", "service": "BimaGinga", "mode": "execution-worker-v1", "task_store": str(os.getenv("BIMAGINGA_DATA_DIR", "/data"))}
 
+@app.get("/api/continuity-health")
+def continuity_health():
+    context = canonical_project_context("Bima cek poin progress roadmap sekarang dimana")
+    return {
+        "status": "ok" if context else "unavailable",
+        "canonical_loaded": bool(context),
+        "canonical_chars": len(context),
+        "has_master_roadmap": "MASTER ROADMAP ISSUE #1" in context,
+    }
+
 @app.get("/")
 def index():
     return FileResponse(ROOT / "index.html")

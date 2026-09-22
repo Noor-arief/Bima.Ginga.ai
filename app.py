@@ -163,7 +163,7 @@ def trading_runtime_context(message: str) -> str:
 
 def canonical_project_context(message: str) -> str:
     """Fetch canonical BIMA roadmap for current project/checkpoint questions."""
-    if not re.search(r"\\b(project|proyek|checkpoint|check point|cek poin|poin|point|progress|progres|status|pending|roadmap|phase|fase|github|repo|prioritas|priority|sampai mana)\\b", message.lower()):
+    if not re.search(r"\b(project|proyek|checkpoint|check point|cek poin|poin|point|progress|progres|status|pending|roadmap|phase|fase|github|repo|prioritas|priority|sampai mana)\b", message.lower()):
         return ""
     token = os.getenv("BIMA_GITHUB_TOKEN", "").strip() or os.getenv("GITHUB_TOKEN", "").strip()
     repo = os.getenv("BIMA_CANONICAL_REPO", "Noor-arief/BIMA").strip()
@@ -446,7 +446,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         context_query,
     ))
     project_intent = trading_intent or bool(re.search(
-        r"\\b(project|proyek|checkpoint|check point|cek poin|poin|point|progress|progres|status|phase|fase|deploy|deployment|repo|github|railway|roadmap|bug|fix|pending|selesai|lanjut project|lanjut proyek|project kita|proyek kita|memory|memori|ingat|remember|lupa|forget|session|sesi|history|riwayat|handoff|hand off|\\bho\\b|lanjut yang kemarin|terakhir kita)\\b",
+        r"\b(project|proyek|checkpoint|check point|cek poin|poin|point|progress|progres|status|phase|fase|deploy|deployment|repo|github|railway|roadmap|bug|fix|pending|selesai|lanjut project|lanjut proyek|project kita|proyek kita|memory|memori|ingat|remember|lupa|forget|session|sesi|history|riwayat|handoff|hand off|\bho\b|lanjut yang kemarin|terakhir kita)\b",
         context_query,
     ))
     casual_intent = bool(re.search(
@@ -462,7 +462,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     canonical_context = canonical_project_context(req.message) if project_intent else ""
 
     continuity_intent = bool(re.search(
-        r"\\b(memory|memori|ingat|remember|lupa|forget|session|sesi|history|riwayat|handoff|hand\\s*off|ho|checkpoint|check point|cek poin|poin|progress|progres|roadmap|lanjut yang kemarin|terakhir kita)\\b",
+        r"\b(memory|memori|ingat|remember|lupa|forget|session|sesi|history|riwayat|handoff|hand\s*off|ho|checkpoint|check point|cek poin|poin|progress|progres|roadmap|lanjut yang kemarin|terakhir kita)\b",
         req.message.lower(),
     ))
     if continuity_intent and not canonical_context:

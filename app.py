@@ -162,45 +162,46 @@ def trading_runtime_context(message: str) -> str:
         return "LIVE TRADING ENGINE STATUS: temporarily unavailable. Do not invent current trading metrics.\n"
 
 def canonical_project_context(message: str) -> str:
-    """Fetch canonical BIMA roadmap for current project/checkpoint questions."""
-    if not re.search(r"\b(project|proyek|checkpoint|check point|cek poin|poin|point|progress|progres|status|pending|roadmap|phase|fase|github|repo|prioritas|priority|sampai mana|memory|memori|ingat|remember|lupa|forget|session|sesi|history|riwayat|handoff|hand\\s*off|ho|lanjut yang kemarin|terakhir kita)\b", message.lower()):
+    """Fetch canonical BIMA roadmap for continuity/project questions."""
+    if not re.search(r"\b(project|proyek|checkpoint|check point|cek poin|poin|point|progress|progres|status|pending|roadmap|phase|fase|github|repo|prioritas|priority|sampai mana|memory|memori|ingat|remember|lupa|forget|session|sesi|history|riwayat|handoff|hand\s*off|ho|lanjut yang kemarin|terakhir kita)\b", message.lower()):
         return ""
-    token = os.getenv("BIMA_GITHUB_TOKEN", "").strip() or os.getenv("GITHUB_TOKEN", "").strip()
     repo = os.getenv("BIMA_CANONICAL_REPO", "Noor-arief/BIMA").strip()
-    if not token:
-        return ""
+    token = os.getenv("BIMA_GITHUB_TOKEN", "").strip() or os.getenv("GITHUB_TOKEN", "").strip()
     headers = {
-        "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json",
         "User-Agent": "BimaGinga-Workspace/1.0",
         "X-GitHub-Api-Version": "2022-11-28",
     }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     chunks = []
-    for url, label in [
-        (f"https://api.github.com/repos/{repo}/issues/1", "MASTER ROADMAP ISSUE #1"),
-        (f"https://api.github.com/repos/{repo}/contents/ROADMAP.md", "ROADMAP.md"),
-    ]:
+    sources = [
+        (f"https://api.github.com/repos/{repo}/issues/1", "MASTER ROADMAP ISSUE #1", "issue"),
+        (f"https://raw.githubusercontent.com/{repo}/main/ROADMAP.md", "ROADMAP.md", "raw"),
+    ]
+    for url, label, kind in sources:
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=6) as response:
-                payload = json.loads(response.read(2_000_000).decode("utf-8"))
-            if label.startswith("MASTER"):
+            with urllib.request.urlopen(req, timeout=8) as response:
+                raw = response.read(2_000_000)
+            if kind == "issue":
+                payload = json.loads(raw.decode("utf-8"))
                 value = str(payload.get("body") or "")
             else:
-                value = base64.b64decode(payload.get("content") or "").decode("utf-8", errors="replace")
+                value = raw.decode("utf-8", errors="replace")
             if value:
-                chunks.append(f"[{label}]\\n{value[:30000]}")
+                chunks.append(f"[{label}]\n{value[:50000]}")
         except Exception as exc:
-            print(f"[canonical_project] {label} unavailable error={type(exc).__name__}", flush=True)
+            print(f"[canonical_project] {label} unavailable error={type(exc).__name__}: {exc}", flush=True)
     if not chunks:
         return ""
     print(f"[canonical_project] loaded chunks={len(chunks)} repo={repo}", flush=True)
     return (
         "CANONICAL BIMA PROJECT STATE — CURRENT SOURCE OF TRUTH. "
-        "Use this evidence for checkpoint/progress/pending/roadmap questions. "
+        "Use this evidence for checkpoint/progress/pending/roadmap and cross-session continuity questions. "
         "Do not say GitHub/repo access is unavailable when this block is present. "
-        "Newest explicit checkpoint overrides stale conversation memory.\\n\\n"
-        + "\\n\\n".join(chunks)
+        "Newest explicit checkpoint overrides stale conversation memory.\n\n"
+        + "\n\n".join(chunks)
     )
 
 def persistent_workspace_context(message: str, recent_history: list[dict[str, str]]) -> str:

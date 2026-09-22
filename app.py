@@ -194,6 +194,7 @@ def canonical_project_context(message: str) -> str:
             print(f"[canonical_project] {label} unavailable error={type(exc).__name__}", flush=True)
     if not chunks:
         return ""
+    print(f"[canonical_project] loaded chunks={len(chunks)} repo={repo}", flush=True)
     return (
         "CANONICAL BIMA PROJECT STATE — CURRENT SOURCE OF TRUTH. "
         "Use this evidence for checkpoint/progress/pending/roadmap questions. "

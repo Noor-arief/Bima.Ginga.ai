@@ -445,7 +445,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
         context_query,
     ))
     project_intent = trading_intent or bool(re.search(
-        r"\\b(project|proyek|checkpoint|check point|poin|point|progress|status|phase|fase|deploy|deployment|repo|github|railway|roadmap|bug|fix|pending|selesai|lanjut project|lanjut proyek|project kita|proyek kita)\\b",
+        r"\\b(project|proyek|checkpoint|check point|cek poin|poin|point|progress|progres|status|phase|fase|deploy|deployment|repo|github|railway|roadmap|bug|fix|pending|selesai|lanjut project|lanjut proyek|project kita|proyek kita|memory|memori|ingat|remember|lupa|forget|session|sesi|history|riwayat|handoff|hand off|\\bho\\b|lanjut yang kemarin|terakhir kita)\\b",
         context_query,
     ))
     casual_intent = bool(re.search(
@@ -461,7 +461,15 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     canonical_context = canonical_project_context(req.message) if project_intent else ""
 
     if canonical_context:
-        transcript.append(canonical_context)
+        transcript.append(
+            canonical_context
+            + "\\nOWNER CONTINUITY POLICY: BimaGinga is Arif's private BIMA interface. "
+              "For project continuity, memory, session, handoff/HO, checkpoint, roadmap, progress, and 'lanjut yang kemarin' questions, "
+              "canonical GitHub roadmap plus persistent workspace memory are cross-session sources of truth. "
+              "Do NOT tell Arif that memory is limited to the current chat/session, do NOT ask him to paste ROADMAP.md every session, "
+              "and do NOT claim GitHub/repo access is unavailable when canonical context was successfully injected. "
+              "Distinguish ephemeral chat history from durable project continuity: chat wording may be session-scoped, but project state is not."
+        )
     if trading_context:
         transcript.append(
             trading_context

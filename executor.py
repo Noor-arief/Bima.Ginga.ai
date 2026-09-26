@@ -6,6 +6,7 @@ import urllib.parse
 import urllib.request
 
 from openai import OpenAI
+from roadmap_issue_tool import get_roadmap_issue, update_roadmap_issue
 
 def _allowed(repo):
     allowed = [x.strip() for x in os.getenv("BIMA_GITHUB_ALLOWED_REPOS", "").split(",") if x.strip()]
@@ -81,6 +82,8 @@ def railway_project_status(project_id):
     return payload.get("data", {}).get("project")
 
 TOOLS = [
+    {"type":"function","function":{"name":"get_roadmap_issue","description":"Read the BIMA roadmap issue from an allowlisted repository before preparing a progress update.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"issue_number":{"type":"integer"}},"required":["repo","issue_number"]}}},
+    {"type":"function","function":{"name":"update_roadmap_issue","description":"Update only the canonical BIMA roadmap issue after the owner explicitly approves the roadmap update. Preserve existing roadmap content and make only the requested progress/checkpoint change. GitHub credentials are already configured; never ask the owner to paste a token.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"issue_number":{"type":"integer"},"body":{"type":"string"}},"required":["repo","issue_number","body"]}}},
     {"type":"function","function":{"name":"github_put_new_file","description":"Create a new text artifact only on an explicitly approved bimaginga-sandbox/* branch. Canonical/main branches are write-locked.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","branch"]}}},
     {"type":"function","function":{"name":"github_get_file","description":"Read a UTF-8 file from an allowlisted GitHub repository.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"ref":{"type":"string","description":"Optional branch/ref. Omit to use the repository canonical default configured by BIMA."}},"required":["repo","path"]}}},
     {"type":"function","function":{"name":"github_update_file","description":"Update an existing UTF-8 file only on an explicitly approved bimaginga-sandbox/* branch. Canonical/main branches are write-locked.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"sha":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","sha","branch"]}}},
@@ -94,7 +97,7 @@ def execute_task(message, skill_instruction):
     client = OpenAI(api_key=key, base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"))
     model = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
     messages = [
-        {"role":"system","content":"You are BIMA Execution Worker. Use tools when the task requires repository evidence or edits. Never invent tool results. Keep changes minimal. For Noor-arief/BIMA, the canonical working branch is telegram-autonomous-project-execution unless the user explicitly names another branch. For Noor-arief/Bima.Ginga.ai, files named without a directory are at repository root unless evidence says otherwise; do not probe speculative app/ or src/ paths first. A failed exploratory tool call does not make the task blocked if later evidence successfully completes the user request. Keep final answers concise: normally 3-6 bullets, do not dump source code unless requested. Never perform production, destructive, wallet, or real-money actions. Repository writes are forbidden on canonical/main/master branches; writes are allowed only on an explicitly approved bimaginga-sandbox/* branch. Reading is allowed. If a requested write has no approved sandbox branch, stop with approval_required rather than writing elsewhere. Continue until the task is actually complete or a concrete blocker remains. "+skill_instruction},
+        {"role":"system","content":"You are BIMA Execution Worker. Use tools when the task requires repository evidence or edits. Never invent tool results. Keep changes minimal. For Noor-arief/BIMA, the canonical working branch is telegram-autonomous-project-execution unless the user explicitly names another branch. For Noor-arief/Bima.Ginga.ai, files named without a directory are at repository root unless evidence says otherwise; do not probe speculative app/ or src/ paths first. A failed exploratory tool call does not make the task blocked if later evidence successfully completes the user request. Keep final answers concise: normally 3-6 bullets, do not dump source code unless requested. Never perform production, destructive, wallet, or real-money actions. Repository file writes are forbidden on canonical/main/master branches; file writes are allowed only on an explicitly approved bimaginga-sandbox/* branch. The canonical BIMA roadmap issue is a narrow exception: after explicit owner approval, read it first and update it using update_roadmap_issue, preserving all existing content and changing only the requested progress/checkpoint. GitHub credentials are already configured through BIMA_GITHUB_TOKEN; never ask the owner to paste or provide a token. Reading is allowed. If a requested file write has no approved sandbox branch, stop with approval_required rather than writing elsewhere. Continue until the task is actually complete or a concrete blocker remains. "+skill_instruction},
         {"role":"user","content":message},
     ]
     evidence = []
@@ -121,9 +124,15 @@ def execute_task(message, skill_instruction):
                     result = github_get_file(**args)
                 elif call.function.name == "github_update_file":
                     result = github_update_file(**args)
+                elif call.function.name == "get_roadmap_issue":
+                    result = get_roadmap_issue(**args)
+                elif call.function.name == "update_roadmap_issue":
+                    result = update_roadmap_issue(**args)
+                elif call.function.name == "railway_project_status":
+                    result = railway_project_status(**args)
                 else:
                     raise RuntimeError("Unknown tool")
-                evidence.append({"tool": call.function.name, "ok": True, "summary": {k:v for k,v in result.items() if k != "content"}})
+                evidence.append({"tool": call.function.name, "ok": True, "summary": {k:v for k,v in result.items() if k not in {"content","body"}}})
                 payload = result
             except Exception as exc:
                 evidence.append({"tool": call.function.name, "ok": False, "error": str(exc)})

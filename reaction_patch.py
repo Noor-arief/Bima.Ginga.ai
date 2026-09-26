@@ -28,23 +28,36 @@ old_make = """function makeMsg(role,text){
     var b=document.createElement('div');b.className='bubble';if(role==='ai')renderMarkdown(b,text);else b.textContent=text;m.appendChild(b);
     return {row:m,bubble:b};
   }"""
-new_make = """function shouldBimaReact(text){
+new_make = """function bimaReactionFor(text){
     var t=String(text||'').trim().toLowerCase();
-    if(!t||t.length>60)return false;
-    if(/^(udah|sudah|ok|okay|oke|sip|nice|mantap|lanjut|lanjutkan|gas|beres|done|makasih|terima kasih|thanks|thank you)[!.? ]*$/.test(t))return true;
-    if(/^(halo|hai|hi|hey)(\\s+(bima|bimaginga))?[!.? ]*$/.test(t))return true;
-    return false;
+    if(!t||t.length>220)return '';
+
+    // One deterministic, contextual reaction. Because it is derived from the
+    // persisted user message, it renders identically again after reload/history restore.
+    if(/(makasih|terima kasih|thanks|thank you|sayang|baik banget|appreciate)/i.test(t))return '❤️';
+    if(/(berhasil|sukses|finally|akhirnya|milestone|lolos|launch|live|profit|cuan|menang|passed|verified|mantap banget|gila.*bagus)/i.test(t))return '🔥';
+    if(/(wkwk|haha|hehe|lucu|ngakak|lol)/i.test(t))return '😂';
+    if(/(nangis|terharu|haru|🥹|😭)/i.test(t))return '🥹';
+    if(/(awas|cek|lihat|perhatiin|perhatikan|aneh|kok|kenapa|masalah|error|bug|hilang|stuck|gagal|failed)/i.test(t))return '👀';
+    if(/(bingung|gimana|bagaimana|menurut|pikir|analisa|analisis|opsi|kenapa)/i.test(t))return '🤔';
+    if(/(selesai|beres|done|completed|complete|fix|fixed)/i.test(t))return '✅';
+    if(/(lanjut|lanjutkan|gas|kerjain|jalanin|update|write|tulis|ubah|benerin|perbaiki|deploy|eksekusi)/i.test(t))return '👍';
+    if(/^(udah|sudah|ok|okay|oke|sip|nice|mantap|yess|yes|ya|iya|boleh|setuju)[!.? ]*$/i.test(t))return '👍';
+    if(/^(halo|hai|hi|hey)(\\s+(bima|bimaginga))?[!.? ]*$/i.test(t))return '👋';
+    return '';
   }
   function makeMsg(role,text){
     var m=document.createElement('div');m.className='msg '+role;
     if(role==='ai'){var w=document.createElement('div');w.className='who';w.textContent='BimaGinga';m.appendChild(w);}
     var b=document.createElement('div');b.className='bubble';if(role==='ai')renderMarkdown(b,text);else b.textContent=text;m.appendChild(b);
-    if(role==='user'&&shouldBimaReact(text)){var r=document.createElement('span');r.className='msg-reaction';r.setAttribute('aria-label','BimaGinga reacted thumbs up');r.textContent='👍';m.appendChild(r);}
+    if(role==='user'){
+      var emoji=bimaReactionFor(text);
+      if(emoji){var r=document.createElement('span');r.className='msg-reaction';r.setAttribute('aria-label','BimaGinga reaction '+emoji);r.textContent=emoji;m.appendChild(r);}
+    }
     return {row:m,bubble:b};
   }"""
 
-# First deployment may already have mutated index.html in Railway only; repository index remains canonical.
-# Apply/reapply deterministically at container startup without touching any other UI/chat behavior.
+# Apply/reapply deterministically at container startup without touching other UI/chat behavior.
 if marker not in s:
     if "</style>" not in s:
         raise SystemExit("index.html missing </style>; refusing unsafe patch")
@@ -53,8 +66,9 @@ if marker not in s:
         raise SystemExit("makeMsg anchor changed; refusing unsafe patch")
     s = s.replace(old_make, new_make, 1)
 else:
-    # Upgrade an already-patched runtime copy if present.
-    start = s.find("function shouldBimaReact(text){")
+    # Upgrade any prior reaction implementation while preserving surrounding chat code.
+    candidates = ["function shouldBimaReact(text){", "function bimaReactionFor(text){"]
+    start = next((s.find(x) for x in candidates if s.find(x) >= 0), -1)
     end = s.find("\n  function renderThread()", start)
     if start < 0 or end < 0:
         raise SystemExit("existing reaction patch structure changed; refusing unsafe patch")
@@ -75,4 +89,4 @@ if roadmap_replacement not in s:
     s = s.replace(roadmap_anchor, roadmap_replacement, 1)
 
 p.write_text(s, encoding="utf-8")
-print("BimaGinga reaction patch V3 + roadmap routing applied")
+print("BimaGinga contextual reaction patch V4 + roadmap routing applied")

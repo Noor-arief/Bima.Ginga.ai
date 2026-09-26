@@ -485,6 +485,47 @@ button{font:inherit;color:inherit}
   .main{background-position:52% 48%;background-attachment:scroll}
 }
 
+/* ===== Roll back photographic background — restore Milky Way V2 CSS ambience ===== */
+.main{
+  background:
+    radial-gradient(ellipse 58% 22% at 53% 44%,rgba(106,91,255,.10),transparent 68%),
+    radial-gradient(ellipse 42% 18% at 68% 31%,rgba(52,116,255,.11),transparent 72%),
+    linear-gradient(180deg,#080d1d 0%,#060b17 100%);
+}
+.main::before{
+  content:"";position:absolute;z-index:0;pointer-events:none;
+  width:155%;height:58%;left:-25%;top:18%;transform:rotate(-12deg);
+  background:
+    radial-gradient(ellipse at 49% 49%,rgba(242,245,255,.24) 0%,rgba(183,184,255,.22) 7%,rgba(120,104,255,.20) 15%,rgba(70,91,210,.14) 29%,rgba(41,63,151,.08) 43%,transparent 66%),
+    radial-gradient(ellipse at 64% 52%,rgba(95,83,255,.18),transparent 33%),
+    radial-gradient(ellipse at 33% 47%,rgba(54,128,255,.13),transparent 31%),
+    linear-gradient(90deg,transparent 2%,rgba(55,83,190,.06) 19%,rgba(145,149,255,.13) 42%,rgba(214,220,255,.14) 50%,rgba(112,115,255,.12) 61%,rgba(48,79,188,.05) 80%,transparent 98%);
+  filter:blur(10px);opacity:.95;
+}
+.main::after{
+  display:block;content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.68;
+  background-image:
+    radial-gradient(circle at 12% 18%,rgba(255,255,255,.82) 0 1px,transparent 1.45px),
+    radial-gradient(circle at 28% 62%,rgba(180,205,255,.70) 0 1.1px,transparent 1.55px),
+    radial-gradient(circle at 44% 24%,rgba(255,255,255,.72) 0 .9px,transparent 1.35px),
+    radial-gradient(circle at 57% 73%,rgba(164,188,255,.68) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 71% 15%,rgba(255,255,255,.76) 0 1px,transparent 1.45px),
+    radial-gradient(circle at 82% 57%,rgba(181,204,255,.66) 0 1.1px,transparent 1.55px),
+    radial-gradient(circle at 94% 34%,rgba(255,255,255,.70) 0 .9px,transparent 1.35px),
+    radial-gradient(circle at 39% 81%,rgba(137,167,255,.60) 0 .8px,transparent 1.25px),
+    radial-gradient(circle at 67% 46%,rgba(255,255,255,.64) 0 .8px,transparent 1.25px);
+  background-size:211px 181px,263px 229px,241px 197px,293px 251px,257px 221px,281px 239px,227px 191px,317px 269px,347px 283px;
+}
+.home.empty .hero-block::before{
+  width:94%;height:230%;
+  background:radial-gradient(ellipse,rgba(63,65,181,.22) 0%,rgba(40,61,145,.13) 36%,transparent 69%);
+}
+@media (max-width:820px){
+  .main{background-attachment:initial}
+  .main::before{width:190%;height:52%;left:-48%;top:23%;opacity:.78;filter:blur(12px)}
+  .main::after{display:block;opacity:.48}
+}
+
 </style>
 </head>
 <body>

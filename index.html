@@ -536,6 +536,19 @@ button{font:inherit;color:inherit}
   .home.empty .composer-wrap{width:min(100%,960px);margin-left:auto;margin-right:auto}
 }
 
+/* ===== Actual home group centering fix — CSS only ===== */
+@media (min-width:821px){
+  #view-home.empty{
+    justify-content:center;
+    padding-top:36px;
+    padding-bottom:36px;
+  }
+  #view-home.empty .hero-block,
+  #view-home.empty .composer-wrap{
+    flex:0 0 auto;
+  }
+}
+
 </style>
 </head>
 <body>

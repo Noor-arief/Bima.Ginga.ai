@@ -526,6 +526,16 @@ button{font:inherit;color:inherit}
   .main::after{display:block;opacity:.48}
 }
 
+/* ===== Center home workspace in available main canvas — CSS only ===== */
+@media (min-width:821px){
+  .view{padding-left:34px;padding-right:34px}
+  .home.empty{width:100%;align-items:center}
+  .home.empty .col{width:min(100%,940px);margin-left:auto;margin-right:auto}
+  .home.empty .hero-block{width:100%;margin-left:auto;margin-right:auto;text-align:center}
+  .home.empty .chips{width:100%;margin-left:auto;margin-right:auto}
+  .home.empty .composer-wrap{width:min(100%,960px);margin-left:auto;margin-right:auto}
+}
+
 </style>
 </head>
 <body>

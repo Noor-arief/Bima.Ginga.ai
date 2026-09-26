@@ -570,6 +570,31 @@ button{font:inherit;color:inherit}
   .main{background-position:center center;background-attachment:scroll}
 }
 
+/* ===== Sidebar galaxy integration — CSS only ===== */
+.sidebar{
+  background:
+    linear-gradient(180deg,rgba(5,11,28,.88),rgba(5,10,24,.94)),
+    url("https://raw.githubusercontent.com/Noor-arief/Bima.Ginga.ai/main/bimaginga-galaxy-bg.jpg") 18% center / auto 118% no-repeat;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-right:1px solid rgba(111,136,255,.18);
+  box-shadow:18px 0 48px rgba(1,5,16,.24);
+}
+.sidebar::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(circle at 18% 10%,rgba(93,112,255,.13),transparent 28%),
+    linear-gradient(90deg,rgba(5,10,24,.12),rgba(5,10,24,.34));
+}
+.sidebar>*{position:relative;z-index:1}
+.sidebar .brand{filter:drop-shadow(0 0 14px rgba(93,112,255,.12))}
+.sidebar .nav-btn.active{
+  background:linear-gradient(120deg,rgba(31,74,155,.72),rgba(66,43,151,.68));
+  border-color:rgba(105,130,255,.48);
+  box-shadow:0 10px 28px rgba(21,33,92,.22),inset 0 1px 0 rgba(255,255,255,.05);
+}
+.recent{border-top-color:rgba(130,151,255,.14)}
+.profile{border-top-color:rgba(130,151,255,.14);background:linear-gradient(180deg,transparent,rgba(7,13,31,.20))}
+
 </style>
 </head>
 <body>

@@ -1,7 +1,10 @@
 import json
 import os
+import time
 import urllib.error
 import urllib.request
+
+import jwt
 
 
 def _allowed(repo):
@@ -9,10 +12,7 @@ def _allowed(repo):
     return repo in allowed
 
 
-def _github(method, path, body=None):
-    token = os.getenv("BIMA_GITHUB_TOKEN")
-    if not token:
-        raise RuntimeError("BIMA_GITHUB_TOKEN is not configured")
+def _request(method, path, token, body=None):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(
         "https://api.github.com" + path,
@@ -27,10 +27,46 @@ def _github(method, path, body=None):
     )
     try:
         with urllib.request.urlopen(req, timeout=25) as res:
-            return json.loads(res.read().decode())
+            raw = res.read().decode()
+            return json.loads(raw) if raw else {}
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode(errors="replace")[:1200]
         raise RuntimeError("GitHub HTTP %s: %s" % (exc.code, detail))
+
+
+def _github_app_token():
+    app_id = os.getenv("BIMA_GITHUB_APP_ID", "").strip()
+    installation_id = os.getenv("BIMA_GITHUB_INSTALLATION_ID", "").strip()
+    private_key = os.getenv("BIMA_GITHUB_APP_PRIVATE_KEY", "")
+    if not app_id or not installation_id or not private_key.strip():
+        return None
+
+    # Railway stores multiline variables verbatim, but also tolerate escaped newlines.
+    private_key = private_key.replace("\\n", "\n")
+    now = int(time.time())
+    app_jwt = jwt.encode(
+        {"iat": now - 60, "exp": now + 540, "iss": app_id},
+        private_key,
+        algorithm="RS256",
+    )
+    data = _request(
+        "POST",
+        "/app/installations/%s/access_tokens" % installation_id,
+        app_jwt,
+    )
+    token = data.get("token")
+    if not token:
+        raise RuntimeError("GitHub App installation token was not returned")
+    return token
+
+
+def _github(method, path, body=None):
+    # Roadmap operations prefer the dedicated BimaGinga GitHub App identity.
+    # Keep the existing PAT only as a compatibility fallback until migration is verified.
+    token = _github_app_token() or os.getenv("BIMA_GITHUB_TOKEN")
+    if not token:
+        raise RuntimeError("GitHub credentials are not configured")
+    return _request(method, path, token, body)
 
 
 def get_roadmap_issue(repo, issue_number):

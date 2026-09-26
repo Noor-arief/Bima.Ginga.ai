@@ -549,6 +549,27 @@ button{font:inherit;color:inherit}
   }
 }
 
+/* ===== FINAL: uploaded galaxy centered in workspace — CSS only ===== */
+.main{
+  background-image:
+    linear-gradient(rgba(3,8,22,.48),rgba(3,8,22,.62)),
+    url("https://raw.githubusercontent.com/Noor-arief/Bima.Ginga.ai/main/bimaginga-galaxy-bg.jpg");
+  background-size:cover;
+  background-position:center center;
+  background-repeat:no-repeat;
+  background-attachment:fixed;
+}
+.main::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  width:auto;height:auto;left:0;top:0;transform:none;filter:none;opacity:1;
+  background:radial-gradient(ellipse 56% 54% at 50% 50%,transparent 15%,rgba(3,8,22,.10) 58%,rgba(3,8,22,.42) 100%);
+}
+.main::after{display:none!important}
+.home.empty .hero-block::before{background:radial-gradient(ellipse,rgba(4,9,24,.26),transparent 70%)}
+@media (max-width:820px){
+  .main{background-position:center center;background-attachment:scroll}
+}
+
 </style>
 </head>
 <body>

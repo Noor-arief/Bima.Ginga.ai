@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 
 ACTION_RE = re.compile(
-    r"\b(?:kerjakan|selesaikan|fix|perbaiki|debug|ubah|edit|implement|test|uji|cek\s+repo|inspect\s+repo|audit)\b",
+    r"\b(?:kerjakan|selesaikan|fix|perbaiki|debug|ubah|edit|implement|test|uji|cek\s+repo|inspect\s+repo|audit|update)\b",
     re.I,
 )
 CREATE_RE = re.compile(

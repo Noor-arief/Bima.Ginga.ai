@@ -32,7 +32,7 @@ new_make = """function shouldBimaReact(text){
     var t=String(text||'').trim().toLowerCase();
     if(!t||t.length>60)return false;
     if(/^(udah|sudah|ok|okay|oke|sip|nice|mantap|lanjut|lanjutkan|gas|beres|done|makasih|terima kasih|thanks|thank you)[!.? ]*$/.test(t))return true;
-    if(/^(halo|hai|hi|hey)(\s+(bima|bimaginga))?[!.? ]*$/.test(t))return true;
+    if(/^(halo|hai|hi|hey)(\\s+(bima|bimaginga))?[!.? ]*$/.test(t))return true;
     return false;
   }
   function makeMsg(role,text){
@@ -60,5 +60,19 @@ else:
         raise SystemExit("existing reaction patch structure changed; refusing unsafe patch")
     s = s[:start] + new_make + s[end:]
 
+# Explicit owner-approved roadmap writes are privileged execution tasks even if the
+# user previously selected an advisory skill such as Planner/Researcher. Force only
+# this narrow intent back to custom_task; ordinary skill behavior remains unchanged.
+roadmap_anchor = """text=(text||'').trim(); if(!text&&!pendingAttachments.length) return;
+    if(skill&&SKILLS[skill]) state.activeSkill=skill;"""
+roadmap_replacement = """text=(text||'').trim(); if(!text&&!pendingAttachments.length) return;
+    if(skill&&SKILLS[skill]) state.activeSkill=skill;
+    var roadmapWrite=/\\b(roadmap|issue)\\b/i.test(text)&&/\\b(update|write|tulis|ubah|edit)\\b/i.test(text)&&/\\b(approve|approved|setuju|izinkan|ijin|izin)\\b/i.test(text);
+    if(roadmapWrite) state.activeSkill='custom_task';"""
+if roadmap_replacement not in s:
+    if roadmap_anchor not in s:
+        raise SystemExit("send() anchor changed; refusing unsafe roadmap routing patch")
+    s = s.replace(roadmap_anchor, roadmap_replacement, 1)
+
 p.write_text(s, encoding="utf-8")
-print("BimaGinga reaction patch V2 applied")
+print("BimaGinga reaction patch V3 + roadmap routing applied")

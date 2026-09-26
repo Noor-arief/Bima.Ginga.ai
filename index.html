@@ -456,6 +456,35 @@ button{font:inherit;color:inherit}
   .tagline{top:30px;right:30px;font-size:10px;line-height:1.65;letter-spacing:.18em}
 }
 
+/* ===== BimaGinga photographic galaxy background — CSS only ===== */
+.main{
+  background:
+    linear-gradient(180deg,rgba(4,9,23,.64),rgba(4,9,20,.76)),
+    url("./bimaginga-galaxy-bg.jpg") center 46% / cover no-repeat fixed;
+}
+.main::before{
+  inset:0;width:auto;height:auto;left:0;top:0;transform:none;filter:none;opacity:1;
+  background:
+    radial-gradient(ellipse 62% 48% at 55% 42%,rgba(45,63,157,.10),transparent 72%),
+    linear-gradient(90deg,rgba(5,10,24,.20),rgba(5,10,24,.04) 45%,rgba(5,10,24,.20));
+}
+.main::after{display:none}
+.home.empty .hero-block::before{
+  width:100%;height:230%;
+  background:radial-gradient(ellipse,rgba(6,11,27,.38) 0%,rgba(8,13,31,.16) 42%,transparent 72%);
+}
+.chip{
+  background:linear-gradient(145deg,rgba(19,29,55,.88),rgba(12,20,39,.90));
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+}
+.composer{
+  background:linear-gradient(145deg,rgba(16,29,59,.94),rgba(10,21,44,.95));
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+@media (max-width:820px){
+  .main{background-position:52% 48%;background-attachment:scroll}
+}
+
 </style>
 </head>
 <body>

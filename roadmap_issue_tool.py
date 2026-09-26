@@ -34,14 +34,29 @@ def _request(method, path, token, body=None):
         raise RuntimeError("GitHub HTTP %s: %s" % (exc.code, detail))
 
 
-def _github_app_token():
-    app_id = os.getenv("BIMA_GITHUB_APP_ID", "").strip()
-    installation_id = os.getenv("BIMA_GITHUB_INSTALLATION_ID", "").strip()
-    private_key = os.getenv("BIMA_GITHUB_APP_PRIVATE_KEY", "")
-    if not app_id or not installation_id or not private_key.strip():
-        return None
+def _github_app_config():
+    return (
+        os.getenv("BIMA_GITHUB_APP_ID", "").strip(),
+        os.getenv("BIMA_GITHUB_INSTALLATION_ID", "").strip(),
+        os.getenv("BIMA_GITHUB_APP_PRIVATE_KEY", ""),
+    )
 
-    # Railway stores multiline variables verbatim, but also tolerate escaped newlines.
+
+def _github_app_token():
+    app_id, installation_id, private_key = _github_app_config()
+    configured = [bool(app_id), bool(installation_id), bool(private_key.strip())]
+    if not any(configured):
+        return None
+    if not all(configured):
+        missing = []
+        if not app_id:
+            missing.append("BIMA_GITHUB_APP_ID")
+        if not installation_id:
+            missing.append("BIMA_GITHUB_INSTALLATION_ID")
+        if not private_key.strip():
+            missing.append("BIMA_GITHUB_APP_PRIVATE_KEY")
+        raise RuntimeError("GitHub App configuration incomplete; missing: " + ", ".join(missing))
+
     private_key = private_key.replace("\\n", "\n")
     now = int(time.time())
     app_jwt = jwt.encode(
@@ -61,9 +76,13 @@ def _github_app_token():
 
 
 def _github(method, path, body=None):
-    # Roadmap operations prefer the dedicated BimaGinga GitHub App identity.
-    # Keep the existing PAT only as a compatibility fallback until migration is verified.
-    token = _github_app_token() or os.getenv("BIMA_GITHUB_TOKEN")
+    # If GitHub App configuration exists at all, roadmap operations are fail-closed
+    # to the App identity. Never silently fall back to the owner's PAT.
+    app_id, installation_id, private_key = _github_app_config()
+    if app_id or installation_id or private_key.strip():
+        token = _github_app_token()
+    else:
+        token = os.getenv("BIMA_GITHUB_TOKEN", "").strip()
     if not token:
         raise RuntimeError("GitHub credentials are not configured")
     return _request(method, path, token, body)

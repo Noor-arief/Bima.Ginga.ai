@@ -32,13 +32,13 @@ new_make = """function bimaReactionFor(text){
     var t=String(text||'').trim().toLowerCase();
     if(!t||t.length>220)return '';
 
-    // One deterministic, contextual reaction. Because it is derived from the
-    // persisted user message, it renders identically again after reload/history restore.
-    if(/(makasih|terima kasih|thanks|thank you|sayang|baik banget|appreciate)/i.test(t))return '❤️';
-    if(/(berhasil|sukses|finally|akhirnya|milestone|lolos|launch|live|profit|cuan|menang|passed|verified|mantap banget|gila.*bagus)/i.test(t))return '🔥';
+    // Emotional intent wins over achievement/action keywords. This keeps mixed
+    // messages such as \"mau nangis, akhirnya berhasil\" emotionally appropriate.
+    if(/(mau\\s*nangis|pengen\\s*nangis|pingin\\s*nangis|terharu|haru|lega banget|terenyuh|🥹|😭)/i.test(t))return '🥹';
+    if(/(makasih|terima kasih|thanks|thank you|sayang|baik banget|appreciate|love this|suka banget)/i.test(t))return '❤️';
     if(/(wkwk|haha|hehe|lucu|ngakak|lol)/i.test(t))return '😂';
-    if(/(nangis|terharu|haru|🥹|😭)/i.test(t))return '🥹';
-    if(/(awas|cek|lihat|perhatiin|perhatikan|aneh|kok|kenapa|masalah|error|bug|hilang|stuck|gagal|failed)/i.test(t))return '👀';
+    if(/(berhasil|sukses|finally|akhirnya|milestone|lolos|launch|live|profit|cuan|menang|passed|verified|mantap banget|gila.*bagus)/i.test(t))return '🔥';
+    if(/(awas|cek|lihat|perhatiin|perhatikan|aneh|kok|masalah|error|bug|hilang|stuck|gagal|failed)/i.test(t))return '👀';
     if(/(bingung|gimana|bagaimana|menurut|pikir|analisa|analisis|opsi|kenapa)/i.test(t))return '🤔';
     if(/(selesai|beres|done|completed|complete|fix|fixed)/i.test(t))return '✅';
     if(/(lanjut|lanjutkan|gas|kerjain|jalanin|update|write|tulis|ubah|benerin|perbaiki|deploy|eksekusi)/i.test(t))return '👍';
@@ -89,4 +89,4 @@ if roadmap_replacement not in s:
     s = s.replace(roadmap_anchor, roadmap_replacement, 1)
 
 p.write_text(s, encoding="utf-8")
-print("BimaGinga contextual reaction patch V4 + roadmap routing applied")
+print("BimaGinga contextual reaction patch V5 + roadmap routing applied")

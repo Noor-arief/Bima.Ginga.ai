@@ -358,6 +358,51 @@ button{font:inherit;color:inherit}
   .chips{grid-template-columns:1fr}.chip{min-height:70px}
 }
 
+/* ===== BimaGinga Milky Way ambience — presentation only, 2026-09-26 ===== */
+.main{
+  isolation:isolate;
+  background:
+    radial-gradient(ellipse 58% 22% at 53% 44%,rgba(106,91,255,.10),transparent 68%),
+    radial-gradient(ellipse 42% 18% at 68% 31%,rgba(52,116,255,.11),transparent 72%),
+    linear-gradient(180deg,#080d1d 0%,#060b17 100%);
+}
+.main::before{
+  content:"";position:absolute;z-index:0;pointer-events:none;
+  width:145%;height:42%;left:-20%;top:24%;
+  transform:rotate(-13deg);
+  background:
+    radial-gradient(ellipse at 48% 50%,rgba(210,220,255,.15) 0%,rgba(128,118,255,.12) 12%,rgba(68,91,210,.08) 28%,transparent 62%),
+    linear-gradient(90deg,transparent 5%,rgba(86,103,225,.035) 25%,rgba(180,188,255,.075) 48%,rgba(78,102,222,.035) 72%,transparent 96%);
+  filter:blur(14px);opacity:.72;
+}
+.main::after{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.42;
+  background-image:
+    radial-gradient(circle at 12% 18%,rgba(255,255,255,.55) 0 1px,transparent 1.35px),
+    radial-gradient(circle at 28% 62%,rgba(173,197,255,.42) 0 1px,transparent 1.25px),
+    radial-gradient(circle at 44% 24%,rgba(255,255,255,.42) 0 .8px,transparent 1.15px),
+    radial-gradient(circle at 57% 73%,rgba(156,180,255,.42) 0 1px,transparent 1.3px),
+    radial-gradient(circle at 71% 15%,rgba(255,255,255,.46) 0 .9px,transparent 1.2px),
+    radial-gradient(circle at 82% 57%,rgba(173,196,255,.38) 0 1px,transparent 1.25px),
+    radial-gradient(circle at 94% 34%,rgba(255,255,255,.40) 0 .8px,transparent 1.15px);
+  background-size:257px 211px,331px 283px,293px 241px,367px 319px,311px 271px,347px 293px,277px 233px;
+}
+.main>.tagline,.main>.topbar,.main>.scrim,.main>.view{position:relative;z-index:1}
+.main>.tagline{position:absolute}
+.home.empty .hero-block{position:relative}
+.home.empty .hero-block::before{
+  content:"";position:absolute;z-index:-1;left:50%;top:42%;width:78%;height:190%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(ellipse,rgba(35,50,111,.22),transparent 67%);
+  filter:blur(20px);pointer-events:none;
+}
+.chip{backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.composer{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+@media (max-width:820px){
+  .main::before{width:170%;left:-38%;top:28%;opacity:.58}
+  .main::after{opacity:.28}
+}
+
 </style>
 </head>
 <body>

@@ -42,7 +42,7 @@ jobs:
       - name: Privileged execution rejects missing owner key
         run: |
           set -euo pipefail
-          code=$(curl --silent --show-error --max-time 30             -o /tmp/exec.json -w "%{http_code}"             -X POST https://bimaginga-isolated-production.up.railway.app/api/chat             -H "Content-Type: application/json"             --data '{"message":"Deploy project ini sekarang ke production.","skill":"custom_task","history":[],"attachments":[]}')
+          code=$(curl --silent --show-error --max-time 30             -o /tmp/exec.json -w "%{http_code}"             -X POST https://bimaginga-isolated-production.up.railway.app/api/chat             -H "Content-Type: application/json"             --data '{"message":"Perbaiki bug ini sekarang.","skill":"custom_task","history":[],"attachments":[]}')
           echo "http_status=$code"
           cat /tmp/exec.json
           python - "$code" <<'PY'

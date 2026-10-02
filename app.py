@@ -24,6 +24,7 @@ except ImportError:
 from router import is_continuation, route_message
 from task_store import create_task, get_task, list_tasks, needs_approval, recover_interrupted, update_task
 from executor import execute_task
+from runtime_role import assert_runtime_role
 
 ROOT = Path(__file__).resolve().parent
 app = FastAPI(title="BimaGinga Workspace", version="0.2.0")
@@ -383,6 +384,7 @@ def run_task(task_id: str):
 
 @app.on_event("startup")
 def startup():
+    assert_runtime_role("BIMA_INTERNAL_WEB")
     recover_interrupted()
     for task in list_tasks(100):
         if task.get("state") == "queued":

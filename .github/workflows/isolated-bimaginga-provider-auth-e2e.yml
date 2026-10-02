@@ -1,0 +1,54 @@
+name: Isolated BimaGinga Provider Auth E2E
+
+on:
+  pull_request:
+    branches:
+      - isolation/phase1-bimaginga-role-guard
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 30             https://bimaginga-isolated-production.up.railway.app/health             | tee /tmp/health.json
+          python - <<'PY'
+          import json
+          data=json.load(open('/tmp/health.json'))
+          assert data.get('status') == 'ok', data
+          assert data.get('service') == 'BimaGinga', data
+          print('health_ok')
+          PY
+
+      - name: Provider-backed ordinary chat
+        run: |
+          set -euo pipefail
+          code=$(curl --silent --show-error --max-time 60             -o /tmp/chat.json -w "%{http_code}"             -X POST https://bimaginga-isolated-production.up.railway.app/api/chat             -H "Content-Type: application/json"             --data '{"message":"Jelaskan REST API dalam satu kalimat sederhana.","skill":"learn_research","history":[],"attachments":[]}')
+          echo "http_status=$code"
+          cat /tmp/chat.json
+          python - "$code" <<'PY'
+          import json, sys
+          code=int(sys.argv[1]); data=json.load(open('/tmp/chat.json'))
+          assert code == 200, (code,data)
+          answer=(data.get('answer') or '').strip()
+          assert answer, data
+          low=answer.lower()
+          assert 'error' not in low or len(answer) > 40, answer
+          print('provider_chat_ok')
+          PY
+
+      - name: Privileged execution rejects missing owner key
+        run: |
+          set -euo pipefail
+          code=$(curl --silent --show-error --max-time 30             -o /tmp/exec.json -w "%{http_code}"             -X POST https://bimaginga-isolated-production.up.railway.app/api/chat             -H "Content-Type: application/json"             --data '{"message":"Deploy project ini sekarang ke production.","skill":"custom_task","history":[],"attachments":[]}')
+          echo "http_status=$code"
+          cat /tmp/exec.json
+          python - "$code" <<'PY'
+          import json, sys
+          code=int(sys.argv[1]); data=json.load(open('/tmp/exec.json'))
+          assert code == 401, (code,data)
+          assert 'authentication failed' in str(data.get('detail','')).lower(), data
+          print('owner_guard_ok')
+          PY

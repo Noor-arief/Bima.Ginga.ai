@@ -1,0 +1,21 @@
+name: BimaGinga Isolated Health E2E
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  isolated-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check isolated BimaGinga health
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 30             https://bimaginga-isolated-production.up.railway.app/health             | tee /tmp/health.json
+          python - <<'PY'
+          import json
+          data=json.load(open('/tmp/health.json'))
+          assert data.get('status') == 'ok', data
+          print('isolated_bimaginga_health_ok')
+          PY

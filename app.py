@@ -357,7 +357,7 @@ def index():
 def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     req.history = normalized_history(req.history)
     # Live GitHub inventory is owner-only and never goes through a speculative answer.
-    if re.search(r"\b(github|repo|repositori|repository)\b", req.message, re.I) and re.search(r"\b(semua|daftar|list|project|proyek)\b", req.message, re.I) and not re.search(r"\b(ubah|hapus|buat|push|edit|delete)\b", req.message, re.I):
+    if re.search(r"\b(github|repo|repositori|repository)\b", req.message, re.I) and re.search(r"\b(semua|daftar|list)\b", req.message, re.I) and not re.search(r"\b(baca|periksa|rangkum|analisis|read|inspect|file|roadmap)\b", req.message, re.I) and not re.search(r"\b(ubah|hapus|buat|push|edit|delete)\b", req.message, re.I):
         require_owner(x_bima_key)
         try:
             inventory = github_list_repositories()
@@ -369,7 +369,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     active_task = get_task(req.active_task_id) if req.active_task_id else None
     active_execution = bool(active_task and active_task.get("state") in {"queued", "running"})
     decision = route_message(req.message, active_task=active_execution)
-    if re.search(r"\b(baca|read|lihat|inspect|cek)\b", req.message, re.I) and re.search(r"\b(github|repo|repository)\b", req.message, re.I):
+    if re.search(r"\b(baca|read|lihat|inspect|cek|periksa|rangkum|ringkas|analisis|analisa|review)\b", req.message, re.I) and re.search(r"\b(github|repo|repository)\b", req.message, re.I):
         decision = type(decision)("execution", "explicit GitHub read needs verified tools")
     # Attachments must stay on the model path so parsed document content reaches BIMA.
     if req.attachments:
@@ -377,7 +377,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     # Planning/writing/analysis/research skills are advisory by default. Action verbs inside
     # the requested deliverable (e.g. "buat strategi") must not start the execution worker.
     advisory_skills = {"write_improve", "analyze_data", "plan_strategize", "learn_research"}
-    if req.skill in advisory_skills:
+    if req.skill in advisory_skills and not (re.search(r"\b(baca|periksa|rangkum|read|inspect)\b", req.message, re.I) and re.search(r"\b(repo|repository|repositori|github)\b", req.message, re.I)):
         decision = type(decision)("chat", "advisory skill handles requested deliverable in conversation")
     if decision.kind == "execution":
         # Privileged execution remains owner-protected; ordinary BIMA chat must not

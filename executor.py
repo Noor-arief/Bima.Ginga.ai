@@ -182,7 +182,7 @@ def execute_task(message, skill_instruction, context=""):
                 references = ["**Sumber GitHub terverifikasi** (" + checked + ")"]
                 for source in sources:
                     references.append("- " + source["repo"] + " / " + source["path"] + " | branch: " + source["branch"] + " | " + source["url"])
-                answer += "\\n\\n" + "\\n".join(references)
+                answer += "\n\n" + "\n".join(references)
             return {"answer": answer, "evidence": evidence, "sources": sources, "provider": "deepseek", "terminal_state": state}
         messages.append(msg)
         for call in msg.tool_calls:

@@ -369,7 +369,7 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     active_task = get_task(req.active_task_id) if req.active_task_id else None
     active_execution = bool(active_task and active_task.get("state") in {"queued", "running"})
     decision = route_message(req.message, active_task=active_execution)
-    if re.search(r"\b(baca|read|lihat|inspect|cek)\b", req.message, re.I) and re.search(r"\b(github|repo|repository)\b", req.message, re.I):
+    if re.search(r"\b(baca|read|lihat|inspect|cek|periksa|rangkum|ringkas|analisis|analisa|review)\b", req.message, re.I) and re.search(r"\b(github|repo|repository)\b", req.message, re.I):
         decision = type(decision)("execution", "explicit GitHub read needs verified tools")
     # Attachments must stay on the model path so parsed document content reaches BIMA.
     if req.attachments:

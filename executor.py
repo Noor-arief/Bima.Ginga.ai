@@ -64,7 +64,7 @@ def _source_evidence(evidence):
         if key in seen:
             continue
         seen.add(key)
-        url = "https://github.com/" + quote(repo, safe="/") + "/blob/" + quote(sha, safe="") + "/" + quote(path, safe="/")
+        url = "https://github.com/" + quote(repo, safe="/") + "/blob/" + quote(ref, safe="") + "/" + quote(path, safe="/")
         sources.append({"repo": repo, "path": path, "branch": ref, "sha": sha, "url": url})
     return sources
 

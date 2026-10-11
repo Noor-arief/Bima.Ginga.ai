@@ -25,13 +25,13 @@ def _save(tasks):
     tmp.write_text(json.dumps(tasks, ensure_ascii=False, indent=2), "utf-8")
     tmp.replace(STORE)
 
-def create_task(message, skill):
+def create_task(message, skill, context=""):
     with _LOCK:
         tasks = _load()
         task_id = uuid.uuid4().hex
         now = int(time.time())
         tasks[task_id] = {
-            "id": task_id, "message": message, "skill": skill,
+            "id": task_id, "message": message, "skill": skill, "context": context[:100000],
             "state": "queued", "created_at": now, "updated_at": now,
             "result": None, "error": None,
         }
@@ -78,3 +78,4 @@ def needs_approval(message):
         "delete service", "hapus service", "change visibility", "ubah visibility",
     )
     return any(term in text for term in protected)
+

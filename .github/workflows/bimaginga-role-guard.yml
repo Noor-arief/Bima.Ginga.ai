@@ -1,0 +1,24 @@
+name: BimaGinga Runtime Role Guard
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - app.py
+      - runtime_role.py
+      - tests/test_runtime_role.py
+      - .github/workflows/bimaginga-role-guard.yml
+  workflow_dispatch:
+
+jobs:
+  role-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile guard
+        run: python -m py_compile runtime_role.py
+      - name: Test fail-closed role boundary
+        run: python -m unittest tests.test_runtime_role

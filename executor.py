@@ -12,6 +12,12 @@ def _allowed(repo):
     allowed = [x.strip() for x in os.getenv("BIMA_GITHUB_ALLOWED_REPOS", "").split(",") if x.strip()]
     return repo in allowed
 
+def _read_allowed(repo):
+    # Read scope: owner repositories visible to the server token.
+    # The existing explicit allowlist remains mandatory for writes.
+    owner = os.getenv("BIMA_GITHUB_READ_OWNER", "Noor-arief").strip()
+    return bool(owner) and repo.startswith(owner + "/") or _allowed(repo)
+
 def _github(method, path, body=None):
     token = os.getenv("BIMA_GITHUB_TOKEN")
     if not token:
@@ -31,14 +37,39 @@ def _github(method, path, body=None):
         detail = exc.read().decode(errors="replace")[:1200]
         raise RuntimeError("GitHub HTTP %s: %s" % (exc.code, detail))
 
+def github_list_repositories(owner="Noor-arief"):
+    """Discover repos visible to the server token, without exposing the token or widening writes."""
+    if owner != "Noor-arief":
+        raise RuntimeError("Repository discovery is restricted to the configured owner")
+    rows = []
+    for page in range(1, 6):
+        data = _github("GET", "/user/repos?affiliation=owner,collaborator,organization_member&per_page=100&page=%d" % page)
+        if not isinstance(data, list):
+            raise RuntimeError("Unexpected GitHub repository list response")
+        for item in data:
+            full_name = item.get("full_name", "")
+            if full_name.startswith(owner + "/"):
+                rows.append({
+                    "repo": full_name,
+                    "visibility": item.get("visibility", "private" if item.get("private") else "public"),
+                    "default_branch": item.get("default_branch") or "main",
+                    "read_allowed": _read_allowed(full_name),
+                    "write_allowed": _allowed(full_name),
+                })
+        if len(data) < 100:
+            break
+    return {"owner": owner, "repositories": rows, "total": len(rows),
+            "read_allowed": sum(bool(x["read_allowed"]) for x in rows),
+            "note": "Read access follows BIMA_GITHUB_READ_OWNER and token permissions; writes remain explicitly allowlisted."}
+
 def _default_ref(repo):
     refs = {"Noor-arief/BIMA": "telegram-autonomous-project-execution", "Noor-arief/Bima.Ginga.ai": "main"}
     return refs.get(repo, "main")
 
 def github_get_file(repo, path, ref=None):
-    if not _allowed(repo):
-        raise RuntimeError("Repository is not in BIMA_GITHUB_ALLOWED_REPOS")
-    ref = ref or _default_ref(repo)
+    if not _read_allowed(repo):
+        raise RuntimeError("Repository is outside BIMA_GITHUB_READ_OWNER and BIMA_GITHUB_ALLOWED_REPOS")
+    ref = ref or _github("GET", "/repos/%s" % repo).get("default_branch", "main")
     q = urllib.parse.urlencode({"ref": ref})
     data = _github("GET", "/repos/%s/contents/%s?%s" % (repo, urllib.parse.quote(path), q))
     content = base64.b64decode(data["content"]).decode("utf-8")
@@ -85,7 +116,8 @@ TOOLS = [
     {"type":"function","function":{"name":"get_roadmap_issue","description":"Read the BIMA roadmap issue from an allowlisted repository before preparing a progress update.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"issue_number":{"type":"integer"}},"required":["repo","issue_number"]}}},
     {"type":"function","function":{"name":"update_roadmap_issue","description":"Update only the canonical BIMA roadmap issue after the owner explicitly approves the roadmap update. Preserve existing roadmap content and make only the requested progress/checkpoint change. GitHub credentials are already configured; never ask the owner to paste a token.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"issue_number":{"type":"integer"},"body":{"type":"string"}},"required":["repo","issue_number","body"]}}},
     {"type":"function","function":{"name":"github_put_new_file","description":"Create a new text artifact only on an explicitly approved bimaginga-sandbox/* branch. Canonical/main branches are write-locked.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","branch"]}}},
-    {"type":"function","function":{"name":"github_get_file","description":"Read a UTF-8 file from an allowlisted GitHub repository.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"ref":{"type":"string","description":"Optional branch/ref. Omit to use the repository canonical default configured by BIMA."}},"required":["repo","path"]}}},
+    {"type":"function","function":{"name":"github_list_repositories","description":"Discover GitHub repositories available to the server account, including access-control status; read-only and does not grant repo permissions.","parameters":{"type":"object","properties":{"owner":{"type":"string","description":"GitHub account owner; defaults to Noor-arief"}}}}},
+    {"type":"function","function":{"name":"github_get_file","description":"Read a UTF-8 file from any permitted repository owned by BIMA_GITHUB_READ_OWNER.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"ref":{"type":"string","description":"Optional branch/ref. Omit to use the repository canonical default configured by BIMA."}},"required":["repo","path"]}}},
     {"type":"function","function":{"name":"github_update_file","description":"Update an existing UTF-8 file only on an explicitly approved bimaginga-sandbox/* branch. Canonical/main branches are write-locked.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"content":{"type":"string"},"message":{"type":"string"},"sha":{"type":"string"},"branch":{"type":"string"}},"required":["repo","path","content","message","sha","branch"]}}},
     {"type":"function","function":{"name":"railway_project_status","description":"Read project and service identity from an allowlisted Railway project. Read-only.","parameters":{"type":"object","properties":{"project_id":{"type":"string"}},"required":["project_id"]}}},
 ]
@@ -120,6 +152,8 @@ def execute_task(message, skill_instruction):
             try:
                 if call.function.name == "github_put_new_file":
                     result = github_put_new_file(**args)
+                elif call.function.name == "github_list_repositories":
+                    result = github_list_repositories(**args)
                 elif call.function.name == "github_get_file":
                     result = github_get_file(**args)
                 elif call.function.name == "github_update_file":

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>BimaGinga.ai</title>
-<meta name="description" content="BimaGinga.ai — one intelligence, infinite possibilities.">
+<title>BimaGinga</title>
+<meta name="description" content="BimaGinga — one intelligence, infinite possibilities.">
 <script>
 try{var t=localStorage.getItem('bg:theme');if(t){document.documentElement.setAttribute('data-theme',JSON.parse(t));}}catch(e){}
 </script>
@@ -66,7 +66,9 @@ button{font:inherit;color:inherit}
   font-weight:600;font-size:21px;letter-spacing:-.01em;padding:4px 12px 22px;text-align:left;color:var(--text);
 }
 .brand svg{width:34px;height:34px}
-.brand b{font-weight:600;color:var(--ai)}
+.brand-name{white-space:nowrap;line-height:1.2;font-weight:600;letter-spacing:-.035em}
+.brand-accent{color:var(--icon)}
+.brand svg{flex:none}
 .nav-btn{
   display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border-radius:14px;
   border:1px solid transparent;background:none;color:var(--muted);font-weight:500;font-size:16px;text-align:left;cursor:pointer;
@@ -224,7 +226,7 @@ button{font:inherit;color:inherit}
 }
 .sidebar{padding:24px 18px 18px;border-right-color:rgba(132,155,255,.12)}
 .brand{font-size:20px;padding:4px 10px 24px;gap:9px}
-.brand svg{width:38px;height:38px}
+.brand svg{width:34px;height:34px}
 .nav-btn{min-height:50px;padding:12px 14px;border-radius:13px}
 .nav-btn[aria-current="page"]{
   background:linear-gradient(135deg,rgba(28,111,255,.28),rgba(115,70,255,.28));
@@ -681,8 +683,8 @@ button{font:inherit;color:inherit}
 
 <svg class="sprite" aria-hidden="true" focusable="false">
   <defs>
-    <linearGradient id="gB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5B8CFF"/><stop offset=".55" stop-color="#7C6CFF"/><stop offset="1" stop-color="#A78BFA"/></linearGradient>
-    <linearGradient id="gO" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#A78BFA"/><stop offset="1" stop-color="#06B6D4"/></linearGradient>
+    <linearGradient id="gB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4F7CFF"/><stop offset=".55" stop-color="#7C6CFF"/><stop offset="1" stop-color="#9DB4FF"/></linearGradient>
+    <linearGradient id="gO" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#9DB4FF"/><stop offset="1" stop-color="#6C93FF"/></linearGradient>
   </defs>
   <symbol id="logo-mark" viewBox="0 0 64 64">
     <g transform="skewX(-8) translate(5 0)">
@@ -711,9 +713,9 @@ button{font:inherit;color:inherit}
 
 <div class="app">
   <aside class="sidebar" id="sidebar" aria-label="Main menu">
-    <button class="brand" data-nav="new" aria-label="BimaGinga.ai, start a new chat">
+    <button class="brand" data-nav="new" aria-label="BimaGinga, start a new chat">
       <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#logo-mark"/></svg>
-      <span>BimaGinga<b>.site</b></span>
+      <span class="brand-name">Bima<span class="brand-accent">Ginga</span></span>
     </button>
     <nav aria-label="Sections">
       <button class="nav-btn" data-nav="new"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"/></svg>New Chat</button>
@@ -731,9 +733,9 @@ button{font:inherit;color:inherit}
 
   <main class="main">
     <div class="topbar">
-      <button class="brand" data-nav="new" aria-label="BimaGinga.ai home">
+      <button class="brand" data-nav="new" aria-label="BimaGinga home">
         <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#logo-mark"/></svg>
-        <span>BimaGinga<b>.site</b></span>
+        <span class="brand-name">Bima<span class="brand-accent">Ginga</span></span>
       </button>
       <button class="icon-btn" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar"><svg class="ico" viewBox="0 0 24 24" style="font-size:24px"><use href="#i-menu"/></svg></button>
     </div>

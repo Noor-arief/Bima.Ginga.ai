@@ -923,10 +923,10 @@ button{font:inherit;color:inherit}
   /* ---------- Chat ---------- */
   function renderMarkdown(el,text){
     el.textContent='';
-    var src=String(text||''), re=/(\*\*([^*]+)\*\*|`([^`]+)`)/g, last=0, m;
+    var src=String(text||''), re=/(https:\/\/github\.com\/[^\s<>]+|\*\*([^*]+)\*\*|`([^`]+)`)/g, last=0, m;
     while((m=re.exec(src))){
       if(m.index>last)el.appendChild(document.createTextNode(src.slice(last,m.index)));
-      var n=document.createElement(m[2]?'strong':'code');n.textContent=m[2]||m[3];el.appendChild(n);last=re.lastIndex;
+      var n;if(m[1].indexOf('https://github.com/')===0){n=document.createElement('a');n.href=m[1];n.target='_blank';n.rel='noopener noreferrer';n.textContent=m[1];n.style.color='var(--accent-a)';n.style.overflowWrap='anywhere';}else{n=document.createElement(m[2]?'strong':'code');n.textContent=m[2]||m[3];}el.appendChild(n);last=re.lastIndex;
     }
     if(last<src.length)el.appendChild(document.createTextNode(src.slice(last)));
   }

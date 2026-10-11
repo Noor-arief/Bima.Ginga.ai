@@ -8,7 +8,7 @@ import urllib.parse
 import urllib.request
 
 from openai import OpenAI
-from roadmap_issue_tool import get_roadmap_issue, update_roadmap_issue
+from roadmap_issue_tool import get_roadmap_issue, update_roadmap_issue, _read_allowed, github_list_repositories
 
 def _allowed(repo):
     allowed = [x.strip() for x in os.getenv("BIMA_GITHUB_ALLOWED_REPOS", "").split(",") if x.strip()]
@@ -34,11 +34,12 @@ def _github(method, path, body=None):
         raise RuntimeError("GitHub HTTP %s: %s" % (exc.code, detail))
 
 def _default_ref(repo):
-    refs = {"Noor-arief/BIMA": "telegram-autonomous-project-execution", "Noor-arief/Bima.Ginga.ai": "main"}
-    return refs.get(repo, "main")
+    if repo == "Noor-arief/Bima.Ginga.ai":
+        return "isolation/phase1-bimaginga-role-guard"
+    return _github("GET", "/repos/" + repo).get("default_branch", "main")
 
 def github_get_file(repo, path, ref=None):
-    if not _allowed(repo):
+    if not _read_allowed(repo):
         raise RuntimeError("Repository is not in BIMA_GITHUB_ALLOWED_REPOS")
     ref = ref or _default_ref(repo)
     q = urllib.parse.urlencode({"ref": ref})
@@ -84,6 +85,7 @@ def railway_project_status(project_id):
     return payload.get("data", {}).get("project")
 
 TOOLS = [
+    {"type":"function","function":{"name":"github_list_repositories","description":"List all repositories readable with the connected GitHub token within the owner read scope.","parameters":{"type":"object","properties":{}}}},
     {"type":"function","function":{"name":"inspect_python","description":"Parse Python source and report syntax errors, functions and classes. Does not execute code or run tests.","parameters":{"type":"object","properties":{"source":{"type":"string"}},"required":["source"]}}},
     {"type":"function","function":{"name":"analyze_csv","description":"Compute row counts, missing cells and finite numeric column aggregates on CSV content. No external I/O.","parameters":{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}}},
     {"type":"function","function":{"name":"github_list_files","description":"List a directory in an allowlisted repository before choosing file paths.","parameters":{"type":"object","properties":{"repo":{"type":"string"},"path":{"type":"string"},"ref":{"type":"string"}},"required":["repo"]}}},
@@ -96,7 +98,7 @@ TOOLS = [
 ]
 
 def available_tools():
-    github_ready = bool(os.getenv("BIMA_GITHUB_TOKEN") and os.getenv("BIMA_GITHUB_ALLOWED_REPOS"))
+    github_ready = bool(os.getenv("BIMA_GITHUB_TOKEN") and (os.getenv("BIMA_GITHUB_ALLOWED_REPOS") or os.getenv("BIMA_GITHUB_READ_OWNERS")))
     railway_ready = bool(os.getenv("BIMA_RAILWAY_TOKEN") and os.getenv("BIMA_RAILWAY_ALLOWED_PROJECTS"))
     return [t for t in TOOLS if (
         t["function"]["name"] in {"inspect_python", "analyze_csv"}
@@ -107,7 +109,7 @@ def available_tools():
 
 
 def github_list_files(repo, path="", ref=None):
-    if not _allowed(repo):
+    if not _read_allowed(repo):
         raise RuntimeError("Repository is not in BIMA_GITHUB_ALLOWED_REPOS")
     ref = ref or _default_ref(repo)
     data = _github("GET", "/repos/%s/contents/%s?%s" % (repo, urllib.parse.quote(path), urllib.parse.urlencode({"ref":ref})))
@@ -167,6 +169,8 @@ def execute_task(message, skill_instruction, context=""):
                     result = github_list_files(**args)
                 elif call.function.name == "github_put_new_file":
                     result = github_put_new_file(**args)
+                elif call.function.name == "github_list_repositories":
+                    result = github_list_repositories()
                 elif call.function.name == "github_get_file":
                     result = github_get_file(**args)
                 elif call.function.name == "github_update_file":

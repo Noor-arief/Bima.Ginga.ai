@@ -25,6 +25,7 @@ from router import is_continuation, route_message
 from task_store import create_task, get_task, list_tasks, needs_approval, recover_interrupted, update_task
 from executor import execute_task
 from connectors import connector_status, test_connector
+from roadmap_issue_tool import github_list_repositories
 from runtime_role import assert_runtime_role
 from workspace_context import normalized_history, context_query as resolve_context_query, select_memory, timestamp_seconds, worker_context, CONTINUE, MEMORY
 from file_intelligence import inspect_python, analyze_csv
@@ -355,9 +356,21 @@ def index():
 @app.post("/api/chat")
 def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
     req.history = normalized_history(req.history)
+    # Live GitHub inventory is owner-only and never goes through a speculative answer.
+    if re.search(r"\b(github|repo|repositori|repository)\b", req.message, re.I) and re.search(r"\b(semua|daftar|list|project|proyek)\b", req.message, re.I) and not re.search(r"\b(ubah|hapus|buat|push|edit|delete)\b", req.message, re.I):
+        require_owner(x_bima_key)
+        try:
+            inventory = github_list_repositories()
+        except Exception:
+            raise HTTPException(status_code=502, detail="Daftar repo GitHub belum bisa dibaca. Cek koneksi dan izin token.")
+        names = [r["full_name"] for r in inventory["repositories"]]
+        return {"answer": "Repo yang dapat gue baca dari GitHub (" + str(len(names)) + "):\n" + "\n".join("- " + name for name in names), "skill": req.skill, "mode": "github-read", "repositories": inventory}
+
     active_task = get_task(req.active_task_id) if req.active_task_id else None
     active_execution = bool(active_task and active_task.get("state") in {"queued", "running"})
     decision = route_message(req.message, active_task=active_execution)
+    if re.search(r"\b(baca|read|lihat|inspect|cek)\b", req.message, re.I) and re.search(r"\b(github|repo|repository)\b", req.message, re.I):
+        decision = type(decision)("execution", "explicit GitHub read needs verified tools")
     # Attachments must stay on the model path so parsed document content reaches BIMA.
     if req.attachments:
         decision = type(decision)("chat", "attachment content requires model inspection")

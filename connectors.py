@@ -29,7 +29,7 @@ def _env(name: str) -> str:
 def _github_configured() -> bool:
     app = gh._github_app_config()
     has_app = all([app[0], app[1], app[2].strip()])
-    return (has_app or bool(_env("BIMA_GITHUB_TOKEN"))) and bool(_env("BIMA_GITHUB_ALLOWED_REPOS"))
+    return (has_app or bool(_env("BIMA_GITHUB_TOKEN"))) and bool(_env("BIMA_GITHUB_ALLOWED_REPOS") or _env("BIMA_GITHUB_READ_OWNERS"))
 
 
 def _configured(cid: str) -> bool:
@@ -78,9 +78,9 @@ def test_connector(cid: str) -> dict:
         return {"id": cid, "ok": False, "detail": "Belum diatur: environment variable belum lengkap."}
     try:
         if cid == "github":
-            repos = [r.strip() for r in _env("BIMA_GITHUB_ALLOWED_REPOS").split(",") if r.strip()]
-            data = gh._github("GET", "/repos/%s" % repos[0])
-            detail = "Bisa membaca repo %s." % data.get("full_name", repos[0])
+            data = gh.github_list_repositories()
+            detail = "Connected — %s repo dapat dibaca sesuai izin token." % data["total"]
+            return {"id": cid, "ok": True, "detail": detail, **data}
         elif cid == "railway":
             data = _json_request(
                 "POST", "https://backboard.railway.com/graphql/v2",

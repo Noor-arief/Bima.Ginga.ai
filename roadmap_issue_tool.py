@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import re
 import urllib.error
 import urllib.request
 
@@ -10,6 +11,31 @@ import jwt
 def _allowed(repo):
     allowed = [x.strip() for x in os.getenv("BIMA_GITHUB_ALLOWED_REPOS", "").split(",") if x.strip()]
     return repo in allowed
+
+
+def _read_allowed(repo):
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
+        return False
+    owners = {x.strip().lower() for x in os.getenv("BIMA_GITHUB_READ_OWNERS", "").split(",") if x.strip()}
+    return _allowed(repo) or repo.split("/")[0].lower() in owners
+
+
+def github_list_repositories():
+    """Enumerate token-accessible repositories, restricted to configured read scope."""
+    use_app = any(_github_app_config())
+    entries = []
+    for page in range(1, 101):
+        path = ("/installation/repositories" if use_app else "/user/repos")
+        data = _github("GET", path + "?per_page=100&page=" + str(page))
+        batch = data.get("repositories", []) if use_app else data
+        if not isinstance(batch, list):
+            raise RuntimeError("Unexpected GitHub repository response")
+        for item in batch:
+            if _read_allowed(item.get("full_name", "")):
+                entries.append({k:item.get(k) for k in ("full_name", "private", "default_branch", "description", "html_url")})
+        if len(batch) < 100:
+            return {"repositories": entries, "total": len(entries), "complete": True}
+    return {"repositories": entries, "total": len(entries), "complete": False}
 
 
 def _request(method, path, token, body=None):
@@ -89,7 +115,7 @@ def _github(method, path, body=None):
 
 
 def get_roadmap_issue(repo, issue_number):
-    if not _allowed(repo):
+    if not _read_allowed(repo):
         raise RuntimeError("Repository is not in BIMA_GITHUB_ALLOWED_REPOS")
     data = _github("GET", "/repos/%s/issues/%s" % (repo, int(issue_number)))
     return {

@@ -1055,7 +1055,7 @@ button{font:inherit;color:inherit}
 
 
   /* ---------- Connectors (status dari server) ---------- */
-  var CONN_LABEL={configured:['Terkonfigurasi','warn'],not_configured:['Belum diatur','bad'],soon:['Segera','']};
+  var CONN_LABEL={configured:['Memeriksa…','warn'],not_configured:['Belum diatur','bad'],soon:['Segera','']};
   function setBadge(id,text,cls){
     var c=$('[data-conn="'+id+'"] .badge');if(!c)return;
     c.textContent=text;c.className='badge'+(cls?' '+cls:'');
@@ -1067,12 +1067,12 @@ button{font:inherit;color:inherit}
       if(r.status===401){note.textContent='Masukkan owner key untuk melihat status koneksi.';return;}
       if(!r.ok)throw new Error('HTTP '+r.status);
       var d=await r.json();note.textContent='';
-      (d.connectors||[]).forEach(function(c){var l=CONN_LABEL[c.state]||['',''];setBadge(c.id,l[0],l[1]);});
+      await Promise.all((d.connectors||[]).map(async function(c){var l=CONN_LABEL[c.state]||['',''];setBadge(c.id,l[0],l[1]);if(c.state==='configured')await testOneConnector(c.id);}));
     }catch(e){note.textContent='Status koneksi belum bisa dimuat.';}
   }
   var selectedConnector=null,connectorResults={};
   var CONNECTOR_INFO={
-    github:['GitHub','Konfigurasi dilakukan di server BimaGinga: BIMA_GITHUB_ALLOWED_REPOS serta BIMA_GITHUB_TOKEN, atau kredensial GitHub App. Tes memeriksa akses baca repo yang diizinkan.'],
+    github:['GitHub','Baca seluruh repo akun Noor-arief yang diizinkan oleh token GitHub, termasuk repo privat. Repo baru otomatis ikut selama token memiliki akses.'],
     railway:['Railway','Konfigurasi RAILWAY_API_TOKEN di server BimaGinga. Tes ini memerlukan account token dan hanya memeriksa akses akun.'],
     resend:['Resend (Email)','Konfigurasi RESEND_API_KEY di server BimaGinga. Tes memeriksa akses daftar domain; API key khusus pengiriman mungkin tidak memiliki izin ini.'],
     sheets:['Google Sheets','Connector Google Sheets belum tersedia.']
@@ -1095,9 +1095,10 @@ button{font:inherit;color:inherit}
       var d=await r.json();
       if(!r.ok)throw new Error(d.detail||('HTTP '+r.status));
       result={ok:!!d.ok,detail:d.detail||'Tes selesai.'};
+      if(d.repositories)result.detail+='\n\n'+d.repositories.map(function(repo){return repo.full_name+(repo.private?' (private)':'');}).join('\n');
     }catch(e){result={ok:false,detail:e.message||'Koneksi gagal diuji.'};}
     connectorResults[id]=result.detail;
-    setBadge(id,result.ok?'Terhubung':'Perlu diperiksa',result.ok?'ok':'bad');
+    setBadge(id,result.ok?'Connected':'Disconnected',result.ok?'ok':'bad');
     if(selectedConnector===id)$('#connectorResult').textContent=result.detail;
     return result.ok;
   }

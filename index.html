@@ -148,6 +148,7 @@ button{font:inherit;color:inherit}
 .btn-test{background:var(--panel);color:inherit;border:1px solid var(--active-line);border-radius:10px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer}
 .btn-test:hover{background:var(--panel-hover)}.btn-test:disabled{opacity:.6;cursor:wait}
 .conn-note{margin:0 0 14px;color:var(--muted);font-size:14px;min-height:1em}
+.connector-detail{margin-top:20px;padding:20px;border:1px solid var(--active-line);border-radius:16px;background:var(--panel);overflow-wrap:anywhere}.connector-detail h3{margin:0 0 10px}.connector-detail p{white-space:pre-line;color:var(--muted)}
 .badge.ok{color:#4ade80;border-color:rgba(74,222,128,.45)}.badge.warn{color:#fbbf24;border-color:rgba(251,191,36,.45)}.badge.bad{color:#f87171;border-color:rgba(248,113,113,.45)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
 .card{
@@ -804,16 +805,22 @@ button{font:inherit;color:inherit}
     <section class="view" id="view-connectors" aria-labelledby="cn-h">
       <div class="panel-in">
         <h2 id="cn-h">Connectors &amp; Plugins</h2>
-        <p>Hubungkan layanan dan aktifkan plugin untuk BimaGinga.</p>
+        <p>Kelola status koneksi layanan BimaGinga dan akses shortcut bantuan.</p>
         <div class="conn-bar"><h3 class="sec-h">Connectors</h3><button class="btn-test" id="testConn" type="button">Tes koneksi</button></div>
         <p class="conn-note" id="connNote" aria-live="polite"></p>
         <div class="cards">
-          <button class="card" data-conn="railway" data-fill="Connector Railway: cek status deployment dan domain "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-code"/></svg><strong>Railway <em class="badge">Connector</em></strong><span>Cek deployment, domain, dan log service.</span></button>
-          <button class="card" data-conn="github" data-fill="Connector GitHub: lihat repo dan buat issue untuk "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file"/></svg><strong>GitHub <em class="badge">Connector</em></strong><span>Baca repo, commit, dan buat issue roadmap.</span></button>
-          <button class="card" data-conn="resend" data-fill="Connector Email: draft email lewat Resend untuk "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><strong>Resend (Email) <em class="badge">Connector</em></strong><span>Kirim dan kelola email transaksional.</span></button>
-          <button class="card" data-conn="sheets" data-fill="Connector Spreadsheet: ambil data dari sheet "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chart"/></svg><strong>Google Sheets <em class="badge">Segera</em></strong><span>Tarik data dashboard dan laporan.</span></button>
+          <button class="card" data-conn="railway" type="button" aria-controls="connectorDetail"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-code"/></svg><strong>Railway <em class="badge">Connector</em></strong><span>Cek deployment, domain, dan log service.</span></button>
+          <button class="card" data-conn="github" type="button" aria-controls="connectorDetail"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file"/></svg><strong>GitHub <em class="badge">Connector</em></strong><span>Baca repo, commit, dan buat issue roadmap.</span></button>
+          <button class="card" data-conn="resend" type="button" aria-controls="connectorDetail"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><strong>Resend (Email) <em class="badge">Connector</em></strong><span>Kirim dan kelola email transaksional.</span></button>
+          <button class="card" data-conn="sheets" type="button" aria-controls="connectorDetail"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chart"/></svg><strong>Google Sheets <em class="badge">Segera</em></strong><span>Tarik data dashboard dan laporan.</span></button>
         </div>
-        <h3 class="sec-h">Plugins</h3>
+        <div id="connectorDetail" class="connector-detail" hidden>
+          <h3 id="connectorTitle" tabindex="-1"></h3>
+          <p id="connectorDescription"></p>
+          <p id="connectorResult" role="status" aria-live="polite"></p>
+          <div class="conn-bar"><button class="btn-test" id="testSelectedConn" type="button">Tes koneksi ini</button><button class="btn-test" id="closeConnDetail" type="button">Tutup</button></div>
+        </div>
+        <h3 class="sec-h">Shortcut bantuan</h3>
         <div class="cards">
           <button class="card" data-fill="Plugin Customer Service: bantu balas komplain "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><strong>CS Assistant <em class="badge">Plugin</em></strong><span>Template balasan dan eskalasi komplain.</span></button>
           <button class="card" data-fill="Plugin Report: buat ringkasan metrik "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chart"/></svg><strong>Report Builder <em class="badge">Plugin</em></strong><span>Ringkasan metrik mingguan dan bulanan.</span></button>
@@ -1063,21 +1070,53 @@ button{font:inherit;color:inherit}
       (d.connectors||[]).forEach(function(c){var l=CONN_LABEL[c.state]||['',''];setBadge(c.id,l[0],l[1]);});
     }catch(e){note.textContent='Status koneksi belum bisa dimuat.';}
   }
+  var selectedConnector=null,connectorResults={};
+  var CONNECTOR_INFO={
+    github:['GitHub','Konfigurasi dilakukan di server BimaGinga: BIMA_GITHUB_ALLOWED_REPOS serta BIMA_GITHUB_TOKEN, atau kredensial GitHub App. Tes memeriksa akses baca repo yang diizinkan.'],
+    railway:['Railway','Konfigurasi RAILWAY_API_TOKEN di server BimaGinga. Tes ini memerlukan account token dan hanya memeriksa akses akun.'],
+    resend:['Resend (Email)','Konfigurasi RESEND_API_KEY di server BimaGinga. Tes memeriksa akses daftar domain; API key khusus pengiriman mungkin tidak memiliki izin ini.'],
+    sheets:['Google Sheets','Connector Google Sheets belum tersedia.']
+  };
+  function showConnector(id){
+    selectedConnector=id;
+    $('#connectorTitle').textContent=CONNECTOR_INFO[id][0];
+    $('#connectorDescription').textContent=CONNECTOR_INFO[id][1]+(id==='sheets'?'':'\nBelum tersedia login atau penyimpanan API key dari halaman ini. Jangan kirim kredensial melalui chat. Tes berhasil hanya memastikan akses provider, bukan mengaktifkan semua tindakan AI.');
+    $('#connectorResult').textContent=connectorResults[id]||'Belum dites pada sesi ini.';
+    $('#testSelectedConn').disabled=id==='sheets';
+    $('#connectorDetail').hidden=false;
+    $('#connectorDetail').scrollIntoView({block:'nearest'});
+    $('#connectorTitle').focus({preventScroll:true});
+  }
+  async function testOneConnector(id){
+    var result;
+    try{
+      var r=await fetch('/api/connectors/'+id+'/test',{method:'POST',headers:apiHeaders()});
+      if(r.status===401)throw new Error('Masukkan owner key melalui Settings, lalu tes ulang.');
+      var d=await r.json();
+      if(!r.ok)throw new Error(d.detail||('HTTP '+r.status));
+      result={ok:!!d.ok,detail:d.detail||'Tes selesai.'};
+    }catch(e){result={ok:false,detail:e.message||'Koneksi gagal diuji.'};}
+    connectorResults[id]=result.detail;
+    setBadge(id,result.ok?'Terhubung':'Perlu diperiksa',result.ok?'ok':'bad');
+    if(selectedConnector===id)$('#connectorResult').textContent=result.detail;
+    return result.ok;
+  }
   async function testConnectors(){
     var btn=$('#testConn'),note=$('#connNote'),ids=['github','railway','resend'],bad=0;
     btn.disabled=true;note.textContent='Menguji koneksi…';
-    for(var i=0;i<ids.length;i++){
-      try{
-        var r=await fetch('/api/connectors/'+ids[i]+'/test',{method:'POST',headers:apiHeaders()});
-        var d=await r.json();
-        if(!r.ok)throw new Error(d.detail||('HTTP '+r.status));
-        setBadge(ids[i],d.ok?'Terhubung':'Gagal',d.ok?'ok':'bad');if(!d.ok)bad++;
-        var card=$('[data-conn="'+ids[i]+'"] span');if(card)card.title=d.detail||'';
-      }catch(e){setBadge(ids[i],'Gagal','bad');bad++;}
-    }
-    note.textContent=bad?bad+' koneksi bermasalah. Arahkan kursor ke kartu untuk detailnya.':'Semua koneksi berfungsi.';
-    btn.disabled=false;
+    try{for(var i=0;i<ids.length;i++){if(!await testOneConnector(ids[i]))bad++;}
+      note.textContent=bad?bad+' koneksi perlu diperiksa. Klik kartu untuk melihat hasil tes.':'Semua tes akses provider berhasil.';
+    }finally{btn.disabled=false;}
   }
+  $$('[data-conn]').forEach(function(b){b.addEventListener('click',function(){showConnector(b.dataset.conn);});});
+  $('#testSelectedConn').addEventListener('click',async function(){
+    var id=selectedConnector,btn=this;btn.disabled=true;$('#connectorResult').textContent='Menguji koneksi…';
+    try{await testOneConnector(id);}finally{btn.disabled=selectedConnector==='sheets';}
+  });
+  $('#closeConnDetail').addEventListener('click',function(){
+    $('#connectorDetail').hidden=true;
+    var card=$('[data-conn="'+selectedConnector+'"]');if(card)card.focus();
+  });
   $('#testConn').addEventListener('click',testConnectors);
   /* ---------- Events ---------- */
   $$('[data-nav]').forEach(function(b){

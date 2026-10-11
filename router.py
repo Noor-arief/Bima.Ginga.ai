@@ -29,6 +29,8 @@ def is_continuation(message: str) -> bool:
 
 def route_message(message: str, active_task: bool = False) -> Route:
     text = " ".join((message or "").strip().split())
+    if re.search(r"\b(kalimat|caption|email|wording|grammar|terjemah|translate|paragraf|resume|cv)\b", text, re.I) and not re.search(r"\b(repo|github|endpoint|script|kode|code)\b", text, re.I):
+        return Route("chat", "writing deliverable belongs in conversation")
     if ACTION_RE.search(text) or CREATE_RE.search(text):
         return Route("execution", "explicit execution intent")
     if active_task and is_continuation(text):
@@ -36,3 +38,4 @@ def route_message(message: str, active_task: bool = False) -> Route:
     if STATUS_RE.search(text):
         return Route("status", "informational project-state request")
     return Route("chat", "normal conversation")
+

@@ -140,6 +140,13 @@ button{font:inherit;color:inherit}
 .home.empty .composer{margin-top:16px}
 
 /* Cards */
+.sec-h{margin:28px 0 14px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.badge{font-style:normal;font-size:11px;font-weight:600;padding:2px 8px;margin-left:6px;border-radius:999px;border:1px solid var(--active-line);color:var(--muted);vertical-align:middle}
+.conn-bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.btn-test{background:var(--panel);color:inherit;border:1px solid var(--active-line);border-radius:10px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer}
+.btn-test:hover{background:var(--panel-hover)}.btn-test:disabled{opacity:.6;cursor:wait}
+.conn-note{margin:0 0 14px;color:var(--muted);font-size:14px;min-height:1em}
+.badge.ok{color:#4ade80;border-color:rgba(74,222,128,.45)}.badge.warn{color:#fbbf24;border-color:rgba(251,191,36,.45)}.badge.bad{color:#f87171;border-color:rgba(248,113,113,.45)}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
 .card{
   display:flex;flex-direction:column;gap:10px;text-align:left;padding:22px;border-radius:16px;cursor:pointer;
@@ -698,6 +705,7 @@ button{font:inherit;color:inherit}
   <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></symbol>
   <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0z"/><path d="M12 18v4"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
 </svg>
 
@@ -711,6 +719,7 @@ button{font:inherit;color:inherit}
       <button class="nav-btn" data-nav="new"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"/></svg>New Chat</button>
       <button class="nav-btn" data-nav="explore"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-compass"/></svg>Explore</button>
       <button class="nav-btn" data-nav="tools"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wrench"/></svg>Tools</button>
+      <button class="nav-btn" data-nav="connectors"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plug"/></svg>Connectors</button>
       <button class="nav-btn" data-nav="library"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"/></svg>Library</button>
       <button class="nav-btn" data-nav="settings"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sliders"/></svg>Settings</button>
     </nav>
@@ -785,6 +794,28 @@ button{font:inherit;color:inherit}
           <button class="card" data-fill="Planner: "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-target"/></svg><strong>Planner</strong><span>Break goals into steps and deadlines.</span></button>
           <button class="card" data-fill="Researcher: "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><strong>Researcher</strong><span>Summarize a topic and list sources to read.</span></button>
           <button class="card" data-fill="File reader: "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file"/></svg><strong>File reader</strong><span>Ask questions about a document.</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONNECTORS -->
+    <section class="view" id="view-connectors" aria-labelledby="cn-h">
+      <div class="panel-in">
+        <h2 id="cn-h">Connectors &amp; Plugins</h2>
+        <p>Hubungkan layanan dan aktifkan plugin untuk BimaGinga.</p>
+        <div class="conn-bar"><h3 class="sec-h">Connectors</h3><button class="btn-test" id="testConn" type="button">Tes koneksi</button></div>
+        <p class="conn-note" id="connNote" aria-live="polite"></p>
+        <div class="cards">
+          <button class="card" data-conn="railway" data-fill="Connector Railway: cek status deployment dan domain "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-code"/></svg><strong>Railway <em class="badge">Connector</em></strong><span>Cek deployment, domain, dan log service.</span></button>
+          <button class="card" data-conn="github" data-fill="Connector GitHub: lihat repo dan buat issue untuk "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file"/></svg><strong>GitHub <em class="badge">Connector</em></strong><span>Baca repo, commit, dan buat issue roadmap.</span></button>
+          <button class="card" data-conn="resend" data-fill="Connector Email: draft email lewat Resend untuk "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><strong>Resend (Email) <em class="badge">Connector</em></strong><span>Kirim dan kelola email transaksional.</span></button>
+          <button class="card" data-conn="sheets" data-fill="Connector Spreadsheet: ambil data dari sheet "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chart"/></svg><strong>Google Sheets <em class="badge">Segera</em></strong><span>Tarik data dashboard dan laporan.</span></button>
+        </div>
+        <h3 class="sec-h">Plugins</h3>
+        <div class="cards">
+          <button class="card" data-fill="Plugin Customer Service: bantu balas komplain "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pen"/></svg><strong>CS Assistant <em class="badge">Plugin</em></strong><span>Template balasan dan eskalasi komplain.</span></button>
+          <button class="card" data-fill="Plugin Report: buat ringkasan metrik "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chart"/></svg><strong>Report Builder <em class="badge">Plugin</em></strong><span>Ringkasan metrik mingguan dan bulanan.</span></button>
+          <button class="card" data-fill="Plugin Research: riset topik dan rangkum sumber "><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg><strong>Researcher Pro <em class="badge">Segera</em></strong><span>Riset mendalam dengan daftar sumber.</span></button>
         </div>
       </div>
     </section>
@@ -876,6 +907,7 @@ button{font:inherit;color:inherit}
       if(cur) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
     });
     if(v==='library') renderLibrary();
+    if(v==='connectors') loadConnectors();
     closeSidebar();
   }
 
@@ -1012,6 +1044,39 @@ button{font:inherit;color:inherit}
   $('#closeMenu').addEventListener('click',function(){closeSidebar();burger.focus();});
   document.addEventListener('keydown',function(e){if(e.key==='Escape') closeSidebar();});
 
+
+  /* ---------- Connectors (status dari server) ---------- */
+  var CONN_LABEL={configured:['Terkonfigurasi','warn'],not_configured:['Belum diatur','bad'],soon:['Segera','']};
+  function setBadge(id,text,cls){
+    var c=$('[data-conn="'+id+'"] .badge');if(!c)return;
+    c.textContent=text;c.className='badge'+(cls?' '+cls:'');
+  }
+  async function loadConnectors(){
+    var note=$('#connNote');
+    try{
+      var r=await fetch('/api/connectors',{headers:apiHeaders()});
+      if(r.status===401){note.textContent='Masukkan owner key untuk melihat status koneksi.';return;}
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      var d=await r.json();note.textContent='';
+      (d.connectors||[]).forEach(function(c){var l=CONN_LABEL[c.state]||['',''];setBadge(c.id,l[0],l[1]);});
+    }catch(e){note.textContent='Status koneksi belum bisa dimuat.';}
+  }
+  async function testConnectors(){
+    var btn=$('#testConn'),note=$('#connNote'),ids=['github','railway','resend'],bad=0;
+    btn.disabled=true;note.textContent='Menguji koneksi…';
+    for(var i=0;i<ids.length;i++){
+      try{
+        var r=await fetch('/api/connectors/'+ids[i]+'/test',{method:'POST',headers:apiHeaders()});
+        var d=await r.json();
+        if(!r.ok)throw new Error(d.detail||('HTTP '+r.status));
+        setBadge(ids[i],d.ok?'Terhubung':'Gagal',d.ok?'ok':'bad');if(!d.ok)bad++;
+        var card=$('[data-conn="'+ids[i]+'"] span');if(card)card.title=d.detail||'';
+      }catch(e){setBadge(ids[i],'Gagal','bad');bad++;}
+    }
+    note.textContent=bad?bad+' koneksi bermasalah. Arahkan kursor ke kartu untuk detailnya.':'Semua koneksi berfungsi.';
+    btn.disabled=false;
+  }
+  $('#testConn').addEventListener('click',testConnectors);
   /* ---------- Events ---------- */
   $$('[data-nav]').forEach(function(b){
     b.addEventListener('click',function(){

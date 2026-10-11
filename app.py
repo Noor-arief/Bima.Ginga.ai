@@ -24,6 +24,7 @@ except ImportError:
 from router import is_continuation, route_message
 from task_store import create_task, get_task, list_tasks, needs_approval, recover_interrupted, update_task
 from executor import execute_task
+from connectors import connector_status, test_connector
 from runtime_role import assert_runtime_role
 from workspace_context import normalized_history, context_query as resolve_context_query, select_memory, timestamp_seconds, worker_context, CONTINUE, MEMORY
 from file_intelligence import inspect_python, analyze_csv
@@ -488,6 +489,19 @@ def task(task_id: str, x_bima_key: str | None = Header(default=None)):
     if not value:
         raise HTTPException(status_code=404, detail="Task not found")
     return value
+
+@app.get("/api/connectors")
+def connectors(x_bima_key: str | None = Header(default=None)):
+    require_owner(x_bima_key)
+    return {"connectors": connector_status()}
+
+@app.post("/api/connectors/{connector_id}/test")
+def connector_test(connector_id: str, x_bima_key: str | None = Header(default=None)):
+    require_owner(x_bima_key)
+    try:
+        return test_connector(connector_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Connector not found")
 
 @app.get("/api/conversations")
 def conversations():

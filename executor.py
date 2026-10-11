@@ -2,6 +2,8 @@ import base64
 import json
 import os
 import re
+from datetime import datetime, timezone
+from urllib.parse import quote
 from file_intelligence import inspect_python, analyze_csv
 import urllib.error
 import urllib.parse
@@ -46,6 +48,26 @@ def github_get_file(repo, path, ref=None):
     data = _github("GET", "/repos/%s/contents/%s?%s" % (repo, urllib.parse.quote(path), q))
     content = base64.b64decode(data["content"]).decode("utf-8")
     return {"repo": repo, "path": path, "ref": ref, "sha": data["sha"], "content": content[:30000]}
+
+def _source_evidence(evidence):
+    """Build an auditable citation list only from successful file reads."""
+    sources = []
+    seen = set()
+    for item in evidence:
+        if not item.get("ok") or item.get("tool") != "github_get_file":
+            continue
+        data = item.get("summary") or {}
+        repo, path, ref, sha = (data.get(k, "") for k in ("repo", "path", "ref", "sha"))
+        if not all(isinstance(x, str) and x for x in (repo, path, ref, sha)):
+            continue
+        key = (repo, path, sha)
+        if key in seen:
+            continue
+        seen.add(key)
+        url = "https://github.com/" + quote(repo, safe="/") + "/blob/" + quote(sha, safe="") + "/" + quote(path, safe="/")
+        sources.append({"repo": repo, "path": path, "branch": ref, "sha": sha, "url": url})
+    return sources
+
 
 def _require_sandbox_branch(branch):
     branch = (branch or "").strip()
@@ -154,7 +176,14 @@ def execute_task(message, skill_instruction, context=""):
                 if external_write and not wrote:
                     state = "blocked"
                     answer = "Perubahan eksternal belum dilakukan atau terverifikasi.\n\n" + answer
-            return {"answer": answer, "evidence": evidence, "provider": "deepseek", "terminal_state": state}
+            sources = _source_evidence(evidence)
+            if sources:
+                checked = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+                references = ["**Sumber GitHub terverifikasi** (" + checked + ")"]
+                for source in sources:
+                    references.append("- " + source["repo"] + " / " + source["path"] + " | branch: " + source["branch"] + " | " + source["url"])
+                answer += "\\n\\n" + "\\n".join(references)
+            return {"answer": answer, "evidence": evidence, "sources": sources, "provider": "deepseek", "terminal_state": state}
         messages.append(msg)
         for call in msg.tool_calls:
             try:

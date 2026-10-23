@@ -1,5 +1,6 @@
 import re
 import os
+import secrets
 import threading
 from pathlib import Path
 from typing import Literal
@@ -49,9 +50,18 @@ class ChatRequest(BaseModel):
     active_task_id: str | None = None
     attachments: list[Attachment] = Field(default_factory=list, max_length=5)
 
+def dr_standby() -> bool:
+    return os.getenv("BIMA_DR_STANDBY", "").strip().lower() in {"true", "1", "yes"}
+
+def require_active_runtime():
+    if dr_standby():
+        raise HTTPException(status_code=503, detail="Standby mode: operations disabled until the owner authorizes cutover.")
+
 def require_owner(x_bima_key: str | None):
     expected = os.getenv("BIMAGINGA_OWNER_KEY")
-    if expected and x_bima_key != expected:
+    if not expected:
+        raise HTTPException(status_code=503, detail="Owner authorization is not configured.")
+    if not secrets.compare_digest((x_bima_key or ""), expected):
         raise HTTPException(status_code=401, detail="BimaGinga owner authentication failed.")
 
 class ConversationRequest(BaseModel):
@@ -383,6 +393,9 @@ def run_task(task_id: str):
 
 @app.on_event("startup")
 def startup():
+    if dr_standby():
+        # Never mutate recovered task records or spawn duplicate workers on cold standby.
+        return
     recover_interrupted()
     for task in list_tasks(100):
         if task.get("state") == "queued":
@@ -390,7 +403,10 @@ def startup():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "BimaGinga", "mode": "execution-worker-v1", "task_store": str(os.getenv("BIMAGINGA_DATA_DIR", "/data"))}
+    return {"status": "standby" if dr_standby() else "ok", "service": "BimaGinga",
+            "mode": "cold-standby" if dr_standby() else "execution-worker-v1",
+            "execution_enabled": not dr_standby(),
+            "task_store": str(os.getenv("BIMAGINGA_DATA_DIR", "/data"))}
 
 @app.get("/api/continuity-health")
 def continuity_health():
@@ -408,6 +424,7 @@ def index():
 
 @app.post("/api/chat")
 def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
+    require_active_runtime()
     active_task = get_task(req.active_task_id) if req.active_task_id else None
     active_execution = bool(active_task and active_task.get("state") in {"queued", "running"})
     decision = route_message(req.message, active_task=active_execution)
@@ -529,11 +546,13 @@ def chat(req: ChatRequest, x_bima_key: str | None = Header(default=None)):
 
 @app.get("/api/tasks")
 def tasks(x_bima_key: str | None = Header(default=None)):
+    require_active_runtime()
     require_owner(x_bima_key)
     return {"tasks": list_tasks()}
 
 @app.get("/api/tasks/{task_id}")
 def task(task_id: str, x_bima_key: str | None = Header(default=None)):
+    require_active_runtime()
     require_owner(x_bima_key)
     value = get_task(task_id)
     if not value:
@@ -542,10 +561,12 @@ def task(task_id: str, x_bima_key: str | None = Header(default=None)):
 
 @app.get("/api/conversations")
 def conversations():
+    require_active_runtime()
     return {"conversations": load_conversations()}
 
 @app.put("/api/conversations/{conversation_id}")
 def put_conversation(conversation_id: str, req: ConversationRequest):
+    require_active_runtime()
     # Conversation persistence is part of the normal chat session, not an owner-only action.
     # Keep owner authentication on privileged task/execution endpoints only.
     req.id = conversation_id

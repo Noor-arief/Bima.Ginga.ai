@@ -18,6 +18,8 @@ services:
       mountPath: /data
       sizeGB: 1
     envVars:
+      - key: BIMA_DR_STANDBY
+        value: 'true'
       - key: BIMAGINGA_DATA_DIR
         value: /data
       - key: BIMAGINGA_OWNER_KEY

@@ -1,4 +1,19 @@
 # BIMA Ginga — Operational Resilience Roadmap
+
+## P0 credential rotation checkpoint — 24 October 2026 (OPEN)
+
+Canonical private runbook: [Railway credential rotation inventory and handover](https://github.com/Noor-arief/BIMA/blob/main/RAILWAY_CREDENTIAL_ROTATION_2026-10-24.md).
+
+- [x] Read Railway preliminary incident report and owner-targeted notification; workspace targeting is not confirmed credential theft.
+- [x] Verified existing Work browser Railway session and eight listed projects. Connector calls still return UNAUTHORIZED; do not repeatedly request reconnection. Chat without Work/browser must read the runbook and must not claim direct runtime access.
+- [x] Content Studio Variables inventory confirms GEMINI_API_KEY, PIAPI_API_KEY, LTX_API_KEY and GOOGLE_CLIENT_SECRET. Prioritize paid-capable AI/cloud keys and privileged tokens; other project inventory is incomplete.
+- [ ] Check provider usage/billing/audit logs since 20 October; revoke immediately if abuse is detected.
+- [ ] Create replacement credentials, update every consumer/environment/shared-variable source and any Render/CI copies, deploy and verify, then revoke old credentials and retest.
+- [ ] Complete remaining project, database/storage, GitHub/App/CI, email and OAuth token inventory; provider names in the runbook's conditional table are not confirmed runtime findings.
+- [ ] Preserve encrypted state before TOKEN_ENCRYPTION_KEY rekey; never blindly overwrite it.
+
+**No credentials have been rotated or revoked in this session.** Online/deployment-success observations do not close incident remediation. No secret values are in this update. Preserve existing roadmap work and approvals.
+
 Updated: 23 October 2026. Master: https://github.com/Noor-arief/BIMA/issues/1
 
 ## P0 Railway incident & PHP2Shell risk — OPEN

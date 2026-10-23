@@ -1,0 +1,28 @@
+# Cold standby only. Import deliberately; no Render resources are created by this file alone.
+# Do not route production traffic until private data, credentials and auth have been verified.
+previews:
+  generation: 'off'
+services:
+  - type: web
+    name: bima-ginga-dr-standby
+    runtime: python
+    region: singapore
+    plan: 0.5c-512mb
+    branch: dr-standby-prep-20261023
+    autoDeployTrigger: 'off'
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    disk:
+      name: bima-ginga-dr-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: BIMA_DR_STANDBY
+        value: 'true'
+      - key: BIMAGINGA_DATA_DIR
+        value: /data
+      - key: BIMAGINGA_OWNER_KEY
+        sync: false
+      # Configure DEEPSEEK_API_KEY / GEMINI_API_KEY only on activation,
+      # in Render's private secret settings. Never commit their values.
